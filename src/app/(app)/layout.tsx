@@ -250,6 +250,17 @@ const NAV = [
     ),
   },
   {
+    href: "/calories",
+    label: "Calories",
+    icon: (active: boolean) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round">
+        <path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z" />
+        <path d="M12 12c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z" />
+      </svg>
+    ),
+  },
+  {
     href: "/settings",
     label: "Task",
     icon: (active: boolean) => (

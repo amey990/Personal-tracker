@@ -385,6 +385,9 @@ export default function MonthlyPage() {
   const [completions, setCompletions] = useState<Completion[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
+  // Calorie data
+  const [calsByDay, setCalsByDay] = useState<Record<string, { total: number; meals: Record<string, number> }>>({});
+  const [calGoal, setCalGoal] = useState<number | null>(null);
   const supabase = createClient();
 
   const monthStart = startOfMonth(currentDate);
@@ -398,26 +401,28 @@ export default function MonthlyPage() {
 
   async function loadData() {
     setLoading(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const [{ data: taskData }, { data: completionData }] = await Promise.all([
-      supabase
-        .from("tasks")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("active", true)
-        .order("position"),
-      supabase
-        .from("completions")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("date", format(monthStart, "yyyy-MM-dd"))
-        .lte("date", format(monthEnd, "yyyy-MM-dd")),
+    const ym = format(currentDate, "yyyy-MM");
+    const [{ data: taskData }, { data: completionData }, { data: foodData }, { data: goalData }] = await Promise.all([
+      supabase.from("tasks").select("*").eq("user_id", user.id).eq("active", true).order("position"),
+      supabase.from("completions").select("*").eq("user_id", user.id)
+        .gte("date", format(monthStart, "yyyy-MM-dd")).lte("date", format(monthEnd, "yyyy-MM-dd")),
+      supabase.from("food_logs").select("date,calories,meal_type").eq("user_id", user.id)
+        .gte("date", format(monthStart, "yyyy-MM-dd")).lte("date", format(monthEnd, "yyyy-MM-dd")),
+      supabase.from("calorie_goal").select("daily_calories").eq("user_id", user.id).eq("year_month", ym).maybeSingle(),
     ]);
     setTasks(taskData || []);
     setCompletions(completionData || []);
+    // Aggregate calories by date and meal
+    const byDay: Record<string, { total: number; meals: Record<string, number> }> = {};
+    for (const row of (foodData || [])) {
+      if (!byDay[row.date]) byDay[row.date] = { total: 0, meals: {} };
+      byDay[row.date].total += Number(row.calories);
+      byDay[row.date].meals[row.meal_type] = (byDay[row.date].meals[row.meal_type] || 0) + Number(row.calories);
+    }
+    setCalsByDay(byDay);
+    setCalGoal(goalData?.daily_calories ?? null);
     setLoading(false);
   }
 
@@ -463,11 +468,14 @@ export default function MonthlyPage() {
 
   const perfectDays = days.filter((d) => getDayScore(d) === 100).length;
   const passedDays = days.filter((d) => !isFuture(d) || isToday(d)).length;
+  const totalCalConsumed = Object.values(calsByDay).reduce((s, d) => s + d.total, 0);
+  const avgCalPerDay = passedDays > 0 ? Math.round(totalCalConsumed / passedDays) : 0;
 
   const statCards = [
     { label: "Perfect days", value: perfectDays, color: "#10b981" },
     { label: "Tasks tracked", value: tasks.length, color: "#a855f7" },
     { label: "Days logged", value: passedDays, color: "#f59e0b" },
+    { label: "Avg kcal/day", value: avgCalPerDay ? `${avgCalPerDay}` : "—", color: "#ef4444" },
   ];
 
   return (
@@ -588,7 +596,7 @@ export default function MonthlyPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: "16px",
         }}
       >
@@ -903,6 +911,125 @@ export default function MonthlyPage() {
                             }}
                           />
                         )}
+                      </td>
+                    );
+                  })}
+                  <td />
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Nutrition Table */}
+      {!loading && (
+        <div style={{ background: "var(--card)", borderRadius: "20px", border: "1px solid var(--border)", overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: `${days.length * 30 + 200}px` }}>
+              <thead style={{ background: "var(--card2)" }}>
+                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  <th style={{ textAlign: "left", padding: "16px 24px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text3)", fontSize: "10px", width: "140px", minWidth: "140px" }}>
+                    Nutrition
+                  </th>
+                  {days.map((day) => (
+                    <th key={day.toISOString()} style={{ padding: "16px 0", textAlign: "center", fontWeight: 600, minWidth: "30px", color: isToday(day) ? "#a855f7" : "var(--text3)", fontSize: "11px" }}>
+                      {format(day, "d")}
+                    </th>
+                  ))}
+                  <th style={{ padding: "16px 20px", textAlign: "right", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text3)", fontSize: "10px", minWidth: "64px" }}>
+                    Avg
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { key: "breakfast", label: "Breakfast", emoji: "🌅", color: "#fcd34d" },
+                  { key: "lunch", label: "Lunch", emoji: "☀️", color: "#fb923c" },
+                  { key: "dinner", label: "Dinner", emoji: "🌙", color: "#818cf8" },
+                  { key: "snack", label: "Snack", emoji: "🍎", color: "#f472b6" },
+                  { key: "other", label: "Other", emoji: "🍽️", color: "#9ca3af" },
+                ].map((meal, i) => {
+                  let totalMealKcal = 0;
+                  let daysWithMeal = 0;
+                  Object.values(calsByDay).forEach(d => {
+                    if (d.meals[meal.key]) {
+                      totalMealKcal += d.meals[meal.key];
+                      daysWithMeal++;
+                    }
+                  });
+                  const avg = daysWithMeal > 0 ? Math.round(totalMealKcal / daysWithMeal) : 0;
+                  
+                  return (
+                    <tr key={meal.key} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td style={{ padding: "12px 24px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span>{meal.emoji}</span>
+                          <span style={{ fontWeight: 600, color: "var(--text2)", fontSize: "12px" }}>{meal.label}</span>
+                        </div>
+                      </td>
+                      {days.map((day) => {
+                        const ds = format(day, "yyyy-MM-dd");
+                        const kcal = calsByDay[ds]?.meals[meal.key];
+                        const isFut = isFuture(day) && !isToday(day);
+                        
+                        return (
+                          <td key={day.toISOString()} style={{ padding: "12px 0", textAlign: "center" }}>
+                            {!isFut && kcal ? (
+                              <div
+                                title={`${kcal} kcal - ${meal.label}`}
+                                style={{
+                                  width: "20px", height: "20px", margin: "0 auto", borderRadius: "6px",
+                                  background: `${meal.color}25`,
+                                  border: `1px solid ${meal.color}55`,
+                                  display: "flex", alignItems: "center", justifyContent: "center"
+                                }}
+                              >
+                                <div style={{ width: "8px", height: "8px", borderRadius: "3px", background: meal.color }} />
+                              </div>
+                            ) : (
+                              <div style={{ width: "20px", height: "20px", margin: "0 auto", borderRadius: "6px", background: !isFut && calsByDay[ds]?.total > 0 ? "#ef444410" : "transparent" }} />
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td style={{ padding: "12px 20px", textAlign: "right" }}>
+                        {avg > 0 ? <span style={{ fontWeight: 700, fontSize: "12px", color: "var(--text3)" }}>{avg}</span> : <span style={{ color: "var(--text3)", fontSize: "12px" }}>—</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+                
+                {/* Daily Total Kcal Row */}
+                <tr style={{ borderTop: "1px solid var(--border)", background: "var(--card2)" }}>
+                  <td style={{ padding: "12px 24px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text)", fontSize: "11px" }}>
+                    🔥 Total Kcal
+                  </td>
+                  {days.map((day) => {
+                    const ds = format(day, "yyyy-MM-dd");
+                    const kcal = calsByDay[ds]?.total;
+                    const isFut = isFuture(day) && !isToday(day);
+                    if (isFut || !kcal) return (
+                      <td key={day.toISOString()} style={{ padding: "12px 0", textAlign: "center" }}>
+                        <div style={{ width: "20px", height: "20px", margin: "0 auto" }} />
+                      </td>
+                    );
+                    const pct = calGoal ? kcal / calGoal : null;
+                    const bg = !pct ? "#a855f720"
+                      : pct > 1.10 ? "#ef444420"
+                      : pct > 0.90 ? "#f59e0b15"
+                      : "#10b98120";
+                    const border = !pct ? "#a855f740"
+                      : pct > 1.10 ? "#ef444440"
+                      : pct > 0.90 ? "#f59e0b30"
+                      : "#10b98140";
+                    return (
+                      <td key={day.toISOString()} style={{ padding: "12px 0", textAlign: "center" }}>
+                        <div
+                          title={`${kcal} kcal${calGoal ? ` / ${calGoal} goal` : ""}`}
+                          style={{ width: "20px", height: "20px", margin: "0 auto", borderRadius: "6px", background: bg, border: `1px solid ${border}` }}
+                        />
                       </td>
                     );
                   })}

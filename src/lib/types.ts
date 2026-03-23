@@ -68,7 +68,26 @@ export interface Goal {
   title: string;
   target: number;
   current: number;
-  unit: string;
+  remarks?: string;
+  deadline?: string;
   color: string;
   created_at: string;
 }
+
+export interface FoodLog {
+  id: string;
+  user_id: string;
+  date: string;
+  meal_type: "breakfast" | "lunch" | "dinner" | "snack" | "other";
+  description: string;
+  calories: number;
+  protein?: number;
+  created_at: string;
+}
+
+export interface CalorieGoal {
+  id: string;
+  user_id: string;
+  year_month: string; // "2026-03"
+  daily_calories: number;
+}

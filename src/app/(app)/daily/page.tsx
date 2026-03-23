@@ -981,7 +981,8 @@ export default function DashboardPage() {
   const [showGoal, setShowGoal] = useState(false);
   const [goalTitle, setGoalTitle] = useState("");
   const [goalTarget, setGoalTarget] = useState("");
-  const [goalUnit, setGoalUnit] = useState("");
+  const [goalRemarks, setGoalRemarks] = useState("");
+  const [goalDeadline, setGoalDeadline] = useState("");
   const [goalColor, setGoalColor] = useState(GOAL_COLORS[0]);
   const [editGoal, setEditGoal] = useState<Goal | null>(null);
   const [editVal, setEditVal] = useState("");
@@ -1122,23 +1123,24 @@ export default function DashboardPage() {
 
   async function addGoal() {
     if (!goalTitle || !goalTarget) return;
-    const { data } = await supabase
+    await supabase
       .from("goals")
       .insert({
         user_id: user.id,
         title: goalTitle,
         target: +goalTarget,
         current: 0,
-        unit: goalUnit,
+        remarks: goalRemarks || null,
+        deadline: goalDeadline || null,
         color: goalColor,
-      })
-      .select()
-      .single();
-    if (data) setGoals((prev) => [...prev, data]);
+      });
     setGoalTitle("");
     setGoalTarget("");
-    setGoalUnit("");
+    setGoalRemarks("");
+    setGoalDeadline("");
     setShowGoal(false);
+    // Always re-fetch so UI is guaranteed to reflect what's in DB
+    await fetchGoals(user.id);
   }
 
   async function updateGoal(goal: Goal, val: number) {
@@ -1858,7 +1860,7 @@ export default function DashboardPage() {
               background: "var(--card2)",
               border: "1px solid var(--border)",
               display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr",
+              gridTemplateColumns: "1fr 1fr",
               gap: 10,
             }}
           >
@@ -1866,20 +1868,30 @@ export default function DashboardPage() {
               placeholder="Goal title"
               value={goalTitle}
               onChange={(e) => setGoalTitle(e.target.value)}
-              style={{ gridColumn: "1/4" }}
+              style={{ gridColumn: "1/3" }}
             />
             <input
+              type="number"
               placeholder="Target number"
               value={goalTarget}
               onChange={(e) => setGoalTarget(e.target.value)}
             />
             <input
-              placeholder="Unit (₹, km, books...)"
-              value={goalUnit}
-              onChange={(e) => setGoalUnit(e.target.value)}
+              type="date"
+              placeholder="Deadline"
+              value={goalDeadline}
+              onChange={(e) => setGoalDeadline(e.target.value)}
+              style={{ colorScheme: "dark" }}
+            />
+            <input
+              placeholder="Remarks (optional)"
+              value={goalRemarks}
+              onChange={(e) => setGoalRemarks(e.target.value)}
+              style={{ gridColumn: "1/3" }}
             />
             <div
               style={{
+                gridColumn: "1/3",
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
@@ -1909,7 +1921,7 @@ export default function DashboardPage() {
             <button
               onClick={addGoal}
               style={{
-                gridColumn: "1/4",
+                gridColumn: "1/3",
                 padding: "10px 0",
                 borderRadius: 12,
                 border: "none",
@@ -2026,16 +2038,13 @@ export default function DashboardPage() {
                           fontSize: 11,
                           color: "var(--text3)",
                           textAlign: "right",
-                          lineHeight: 1.4,
+                          lineHeight: 1.5,
                         }}
                       >
-                        {goal.unit}
-                        {Number(goal.current).toLocaleString()}
-                        <br />
-                        <span style={{ color: "var(--text3)" }}>
-                          of {goal.unit}
-                          {Number(goal.target).toLocaleString()}
-                        </span>
+                        {Number(goal.current).toLocaleString()} / {Number(goal.target).toLocaleString()}
+                        {goal.deadline && (
+                          <><br /><span style={{ color: "#f59e0b" }}>📅 {new Date(goal.deadline + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span></>
+                        )}
                       </span>
                     </div>
 
@@ -2058,6 +2067,12 @@ export default function DashboardPage() {
                         }}
                       />
                     </div>
+
+                    {goal.remarks && (
+                      <p style={{ fontSize: 11, color: "var(--text3)", marginBottom: 10, fontStyle: "italic" }}>
+                        {goal.remarks}
+                      </p>
+                    )}
 
                     {isEdit ? (
                       <div style={{ display: "flex", gap: 6 }}>
