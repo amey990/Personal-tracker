@@ -479,6 +479,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Link
               key={href}
               href={href}
+              prefetch={true}
               title={label}
               style={{
                 width: 44,
@@ -768,6 +769,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={href}
                   href={href}
+                  prefetch={true}
                   onClick={() => setMobileOpen(false)}
                   style={{
                     display: "flex",
