@@ -90,4 +90,30 @@ export interface CalorieGoal {
   user_id: string;
   year_month: string; // "2026-03"
   daily_calories: number;
+}
+
+export interface Course {
+  id: string;
+  user_id: string;
+  name: string;
+  platform: string;
+  total_sections: number;
+  completed_sections: number;
+  color: string;
+  position: number;
+  active: boolean;
+  created_at: string;
+}
+
+export interface DailyPlanItem {
+  id: string;
+  user_id: string;
+  course_id: string | null;
+  title: string;
+  date: string;
+  completed: boolean;
+  notes: string | null;
+  created_at: string;
+  // Joined field (from query)
+  course?: Course;
 }
