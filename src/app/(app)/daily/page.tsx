@@ -826,7 +826,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Task, TaskWithStatus, Spend, Goal } from "@/lib/types";
+import { Task, TaskWithStatus, Spend } from "@/lib/types";
 import { format } from "date-fns";
 
 const CATS = [
@@ -837,14 +837,6 @@ const CATS = [
   { label: "Entertainment", icon: "🎬" },
   { label: "Bills", icon: "📄" },
   { label: "Other", icon: "💸" },
-];
-const GOAL_COLORS = [
-  "#a855f7",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#3b82f6",
-  "#ec4899",
 ];
 const TODO_KEY = () => `todos_${format(new Date(), "yyyy-MM-dd")}`;
 interface Todo {
@@ -977,15 +969,6 @@ export default function DashboardPage() {
   const [spendAmt, setSpendAmt] = useState("");
   const [spendCat, setSpendCat] = useState("Food");
   const [spendNote, setSpendNote] = useState("");
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [showGoal, setShowGoal] = useState(false);
-  const [goalTitle, setGoalTitle] = useState("");
-  const [goalTarget, setGoalTarget] = useState("");
-  const [goalRemarks, setGoalRemarks] = useState("");
-  const [goalDeadline, setGoalDeadline] = useState("");
-  const [goalColor, setGoalColor] = useState(GOAL_COLORS[0]);
-  const [editGoal, setEditGoal] = useState<Goal | null>(null);
-  const [editVal, setEditVal] = useState("");
   const [todos, setTodos] = useState<Todo[]>([]);
   const [todoInput, setTodoInput] = useState("");
   const [userName, setUserName] = useState("there");
@@ -1014,7 +997,6 @@ export default function DashboardPage() {
     await Promise.all([
       fetchTasks(user.id),
       fetchSpends(user.id),
-      fetchGoals(user.id),
       fetchBudget(user.id),
     ]);
     setLoading(false);
@@ -1052,15 +1034,6 @@ export default function DashboardPage() {
       .eq("date", today)
       .order("created_at", { ascending: false });
     setSpends(data || []);
-  }
-
-  async function fetchGoals(uid: string) {
-    const { data } = await supabase
-      .from("goals")
-      .select("*")
-      .eq("user_id", uid)
-      .order("created_at");
-    setGoals(data || []);
   }
 
   async function fetchBudget(uid: string) {
@@ -1119,42 +1092,6 @@ export default function DashboardPage() {
   async function delSpend(id: string) {
     await supabase.from("spends").delete().eq("id", id);
     setSpends((prev) => prev.filter((s) => s.id !== id));
-  }
-
-  async function addGoal() {
-    if (!goalTitle || !goalTarget) return;
-    await supabase
-      .from("goals")
-      .insert({
-        user_id: user.id,
-        title: goalTitle,
-        target: +goalTarget,
-        current: 0,
-        remarks: goalRemarks || null,
-        deadline: goalDeadline || null,
-        color: goalColor,
-      });
-    setGoalTitle("");
-    setGoalTarget("");
-    setGoalRemarks("");
-    setGoalDeadline("");
-    setShowGoal(false);
-    // Always re-fetch so UI is guaranteed to reflect what's in DB
-    await fetchGoals(user.id);
-  }
-
-  async function updateGoal(goal: Goal, val: number) {
-    await supabase.from("goals").update({ current: val }).eq("id", goal.id);
-    setGoals((prev) =>
-      prev.map((g) => (g.id === goal.id ? { ...g, current: val } : g)),
-    );
-    setEditGoal(null);
-    setEditVal("");
-  }
-
-  async function delGoal(id: string) {
-    await supabase.from("goals").delete().eq("id", id);
-    setGoals((prev) => prev.filter((g) => g.id !== id));
   }
 
   const done = tasks.filter((t) => t.completed).length;
@@ -1810,342 +1747,6 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
-
-      {/* ══ GOALS ══ */}
-      <Card accent={accentBlue}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-          }}
-        >
-          <Label>Goals</Label>
-          <button
-            onClick={() => setShowGoal(!showGoal)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "7px 16px",
-              borderRadius: 10,
-              border: "none",
-              cursor: "pointer",
-              background: showGoal ? "var(--card2)" : "#2563eb",
-              color: showGoal ? "var(--text2)" : "white",
-              fontSize: 12,
-              fontWeight: 600,
-              transition: "all .2s",
-            }}
-          >
-            {showGoal ? (
-              <>
-                <XIcon size={11} /> Cancel
-              </>
-            ) : (
-              <>
-                <PlusIcon size={11} /> Add goal
-              </>
-            )}
-          </button>
-        </div>
-
-        {showGoal && (
-          <div
-            style={{
-              marginBottom: 20,
-              padding: 18,
-              borderRadius: 16,
-              background: "var(--card2)",
-              border: "1px solid var(--border)",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 10,
-            }}
-          >
-            <input
-              placeholder="Goal title"
-              value={goalTitle}
-              onChange={(e) => setGoalTitle(e.target.value)}
-              style={{ gridColumn: "1/3" }}
-            />
-            <input
-              type="number"
-              placeholder="Target number"
-              value={goalTarget}
-              onChange={(e) => setGoalTarget(e.target.value)}
-            />
-            <input
-              type="date"
-              placeholder="Deadline"
-              value={goalDeadline}
-              onChange={(e) => setGoalDeadline(e.target.value)}
-              style={{ colorScheme: "dark" }}
-            />
-            <input
-              placeholder="Remarks (optional)"
-              value={goalRemarks}
-              onChange={(e) => setGoalRemarks(e.target.value)}
-              style={{ gridColumn: "1/3" }}
-            />
-            <div
-              style={{
-                gridColumn: "1/3",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "0 4px",
-              }}
-            >
-              {GOAL_COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setGoalColor(c)}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: "50%",
-                    background: c,
-                    border: "none",
-                    cursor: "pointer",
-                    outline: goalColor === c ? `3px solid ${c}` : "none",
-                    outlineOffset: 2,
-                    flexShrink: 0,
-                    transition: "transform .15s",
-                    transform: goalColor === c ? "scale(1.2)" : "scale(1)",
-                  }}
-                />
-              ))}
-            </div>
-            <button
-              onClick={addGoal}
-              style={{
-                gridColumn: "1/3",
-                padding: "10px 0",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                background: "#2563eb",
-                color: "white",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              Save goal
-            </button>
-          </div>
-        )}
-
-        {goals.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--text3)", padding: "8px 0" }}>
-            No goals yet — click "Add goal" to start tracking
-          </p>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 14,
-            }}
-          >
-            {goals.map((goal) => {
-              const pct = Math.min(
-                Math.round((goal.current / goal.target) * 100),
-                100,
-              );
-              const isEdit = editGoal?.id === goal.id;
-              return (
-                <div
-                  key={goal.id}
-                  style={{
-                    padding: "18px 20px",
-                    borderRadius: 18,
-                    background: "var(--card2)",
-                    border: "1px solid var(--border)",
-                    position: "relative",
-                    overflow: "hidden",
-                    transition: "border-color .2s",
-                  }}
-                >
-                  {/* Colored left bar */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: 16,
-                      bottom: 16,
-                      width: 3,
-                      borderRadius: "0 4px 4px 0",
-                      background: goal.color,
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      marginBottom: 12,
-                      paddingLeft: 8,
-                    }}
-                  >
-                    <p
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "var(--text)",
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      {goal.title}
-                    </p>
-                    <button
-                      onClick={() => delGoal(goal.id)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "var(--text3)",
-                        padding: 2,
-                        display: "flex",
-                      }}
-                    >
-                      <XIcon size={12} />
-                    </button>
-                  </div>
-
-                  <div style={{ paddingLeft: 8 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 28,
-                          fontWeight: 900,
-                          color: goal.color,
-                          letterSpacing: "-1px",
-                        }}
-                      >
-                        {pct}%
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "var(--text3)",
-                          textAlign: "right",
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {Number(goal.current).toLocaleString()} / {Number(goal.target).toLocaleString()}
-                        {goal.deadline && (
-                          <><br /><span style={{ color: "#f59e0b" }}>📅 {new Date(goal.deadline + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span></>
-                        )}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        height: 5,
-                        background: "var(--card3)",
-                        borderRadius: 5,
-                        overflow: "hidden",
-                        marginBottom: 12,
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: 5,
-                          width: `${pct}%`,
-                          background: goal.color,
-                          borderRadius: 5,
-                          transition: "width .7s ease",
-                        }}
-                      />
-                    </div>
-
-                    {goal.remarks && (
-                      <p style={{ fontSize: 11, color: "var(--text3)", marginBottom: 10, fontStyle: "italic" }}>
-                        {goal.remarks}
-                      </p>
-                    )}
-
-                    {isEdit ? (
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <input
-                          type="number"
-                          placeholder="New value"
-                          value={editVal}
-                          onChange={(e) => setEditVal(e.target.value)}
-                          onKeyDown={(e) =>
-                            e.key === "Enter" && updateGoal(goal, +editVal)
-                          }
-                          autoFocus
-                          style={{ flex: 1, fontSize: 12, padding: "7px 10px" }}
-                        />
-                        <button
-                          onClick={() => updateGoal(goal, +editVal)}
-                          style={{
-                            padding: "7px 12px",
-                            borderRadius: 8,
-                            border: "none",
-                            cursor: "pointer",
-                            background: goal.color,
-                            color: "white",
-                            fontSize: 12,
-                            fontWeight: 600,
-                          }}
-                        >
-                          ✓
-                        </button>
-                        <button
-                          onClick={() => setEditGoal(null)}
-                          style={{
-                            padding: "7px 10px",
-                            borderRadius: 8,
-                            border: "none",
-                            cursor: "pointer",
-                            background: "var(--card3)",
-                            color: "var(--text3)",
-                            fontSize: 12,
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setEditGoal(goal);
-                          setEditVal(String(goal.current));
-                        }}
-                        style={{
-                          background: "none",
-                          border: `1px solid ${goal.color}33`,
-                          borderRadius: 8,
-                          padding: "6px 12px",
-                          cursor: "pointer",
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: goal.color,
-                          transition: "all .2s",
-                          width: "100%",
-                        }}
-                      >
-                        Update progress →
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
     </div>
   );
 }
