@@ -202,7 +202,131 @@ import { Task } from "@/lib/types";
 import TaskForm from "@/components/TaskForm";
 import TaskItem from "@/components/TaskItem";
 
-// Removed BudgetSetting component
+function BudgetSetting() {
+  const [limit, setLimit] = useState("");
+  const [current, setCurrent] = useState<number | null>(null);
+  const [saved, setSaved] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function load() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("budget_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      if (data) {
+        setCurrent(data.daily_limit);
+        setLimit(String(data.daily_limit));
+      }
+    }
+    load();
+  }, []);
+
+  async function save() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !limit || isNaN(+limit) || +limit <= 0) return;
+    await supabase
+      .from("budget_settings")
+      .upsert({ user_id: user.id, daily_limit: Number(limit) });
+    setCurrent(Number(limit));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div
+      style={{
+        borderRadius: 16,
+        background: "var(--card)",
+        border: "1px solid var(--border)",
+        padding: "20px 24px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "var(--text)",
+              margin: 0,
+              marginBottom: 4,
+            }}
+          >
+            Daily Spend Budget
+          </p>
+          <p
+            style={{
+              fontSize: 12,
+              color: "var(--text3)",
+              margin: 0,
+            }}
+          >
+            {current
+              ? `Current: ₹${Number(current).toLocaleString("en-IN")} / day`
+              : "Not set yet — set a daily spending limit"}
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+            ₹
+          </span>
+          <input
+            type="number"
+            placeholder="e.g. 1000"
+            value={limit}
+            onChange={(e) => setLimit(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && save()}
+            style={{
+              width: 120,
+              background: "var(--card2)",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              padding: "8px 12px",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "var(--text)",
+              outline: "none",
+            }}
+          />
+          <button
+            onClick={save}
+            style={{
+              padding: "8px 18px",
+              borderRadius: 10,
+              border: "none",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 700,
+              color: "white",
+              background: saved
+                ? "#059669"
+                : "linear-gradient(135deg, #7c3aed, #a855f7)",
+              transition: "all .3s",
+            }}
+          >
+            {saved ? "✓ Saved" : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -308,7 +432,22 @@ export default function SettingsPage() {
         </button>
       </div>
 
-
+      {/* Budget Setting */}
+      <div>
+        <p
+          style={{
+            fontSize: "11px",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            color: "var(--text3)",
+            marginBottom: "12px",
+          }}
+        >
+          Finance
+        </p>
+        <BudgetSetting />
+      </div>
 
       {/* Task form */}
       {showForm && (

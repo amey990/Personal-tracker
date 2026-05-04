@@ -183,8 +183,7 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState, useRef, useTransition } from "react";
 
 const NAV = [
   {
@@ -298,23 +297,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [isPending, startTransition] = useTransition();
 
   const [email, setEmail] = useState("");
   const [initials, setInitials] = useState("U");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [habitScore, setHabitScore] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const initRef = useRef(false);
+  const userIdRef = useRef<string | null>(null);
 
+  // Single init on mount — no [pathname] dependency
   useEffect(() => {
     const saved = (localStorage.getItem("theme") || "dark") as "dark" | "light";
     setTheme(saved);
     document.documentElement.setAttribute("data-theme", saved);
+
+    if (initRef.current) return;
+    initRef.current = true;
+
+    // Prefetch all routes for instant navigation
+    NAV.forEach(({ href }) => router.prefetch(href));
 
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
         router.push("/login");
         return;
       }
+      userIdRef.current = user.id;
       setEmail(user.email || "");
       const name = (user.email || "").split("@")[0];
       const parts = name.split(/[._-]/);
@@ -324,32 +334,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           .join("")
           .slice(0, 2) || "U",
       );
+      // Load score once after getting user
+      loadScoreForUser(user.id);
     });
+  }, []);
 
-    loadScore();
-  }, [pathname]);
-
-  async function loadScore() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+  // Lightweight score refresh — uses cached userId, no getUser call
+  async function loadScoreForUser(uid: string) {
     const today = new Date().toISOString().split("T")[0];
     const [{ data: tasks }, { data: comps }] = await Promise.all([
       supabase
         .from("tasks")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", uid)
         .eq("active", true),
       supabase
         .from("completions")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", uid)
         .eq("date", today),
     ]);
     if (tasks?.length)
       setHabitScore(Math.round(((comps?.length || 0) / tasks.length) * 100));
+    else setHabitScore(0);
   }
+
+  // Refresh score when returning to dashboard (lightweight — no getUser)
+  useEffect(() => {
+    if (pathname === "/daily" && userIdRef.current) {
+      loadScoreForUser(userIdRef.current);
+    }
+  }, [pathname]);
 
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
@@ -490,10 +505,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {NAV.map(({ href, label, icon }) => {
           const active = pathname === href;
           return (
-            <Link
+            <button
               key={href}
-              href={href}
-              prefetch={false}
+              onClick={() => {
+                if (active) return;
+                startTransition(() => router.push(href));
+              }}
               title={label}
               style={{
                 width: 44,
@@ -507,9 +524,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 border: active
                   ? "1px solid rgba(139,92,246,0.2)"
                   : "1px solid transparent",
-                transition: "all .2s",
+                transition: "all .15s",
                 textDecoration: "none",
                 position: "relative",
+                cursor: "pointer",
               }}
             >
               {active && (
@@ -527,7 +545,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 />
               )}
               {icon(active)}
-            </Link>
+            </button>
           );
         })}
 
@@ -669,8 +687,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* ═══ PAGE CONTENT ═══ */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
-          {children}
+        <main style={{ flex: 1, overflowY: "auto", padding: "28px 32px", position: "relative" }}>
+          {/* Transition loading bar */}
+          {isPending && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                zIndex: 99,
+                background: "linear-gradient(90deg, transparent, #a855f7, #7c3aed, transparent)",
+                animation: "shimmer 1s ease-in-out infinite",
+              }}
+            />
+          )}
+          <div style={{ opacity: isPending ? 0.6 : 1, transition: "opacity .15s" }}>
+            {children}
+          </div>
         </main>
       </div>
 
@@ -736,11 +771,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {NAV.map(({ href, label, icon }) => {
               const active = pathname === href;
               return (
-                <Link
+                <button
                   key={href}
-                  href={href}
-                  prefetch={false}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => {
+                    setMobileOpen(false);
+                    if (!active) startTransition(() => router.push(href));
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -753,11 +789,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     fontSize: 14,
                     fontWeight: active ? 600 : 400,
                     transition: "all .2s",
+                    border: "none",
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
                   }}
                 >
                   {icon(active)}
                   {label}
-                </Link>
+                </button>
               );
             })}
             <div style={{ flex: 1 }} />

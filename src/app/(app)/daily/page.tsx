@@ -974,6 +974,8 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState("there");
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [budgetInput, setBudgetInput] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem(TODO_KEY());
@@ -1092,6 +1094,16 @@ export default function DashboardPage() {
   async function delSpend(id: string) {
     await supabase.from("spends").delete().eq("id", id);
     setSpends((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  async function saveBudget() {
+    if (!budgetInput || isNaN(+budgetInput) || +budgetInput <= 0) return;
+    await supabase
+      .from("budget_settings")
+      .upsert({ user_id: user.id, daily_limit: +budgetInput });
+    setDailyLimit(+budgetInput);
+    setEditingBudget(false);
+    setBudgetInput("");
   }
 
   const done = tasks.filter((t) => t.completed).length;
@@ -1329,25 +1341,123 @@ export default function DashboardPage() {
             }}
           >
             <Label>Daily spends</Label>
-            <button
-              onClick={() => setShowSpend(!showSpend)}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {/* Edit budget button */}
+              <button
+                onClick={() => {
+                  setEditingBudget(!editingBudget);
+                  setBudgetInput(String(dailyLimit));
+                }}
+                title="Change daily budget"
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: editingBudget ? "var(--card3)" : "transparent",
+                  color: "var(--text3)",
+                  transition: "all .2s",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+              {/* Add spend button */}
+              <button
+                onClick={() => setShowSpend(!showSpend)}
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: showSpend ? "var(--card3)" : "#059669",
+                  color: "white",
+                  transition: "all .2s",
+                }}
+              >
+                {showSpend ? <XIcon size={12} /> : <PlusIcon size={12} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Budget editor inline */}
+          {editingBudget && (
+            <div
               style={{
-                width: 26,
-                height: 26,
-                borderRadius: 8,
-                border: "none",
-                cursor: "pointer",
+                marginBottom: 12,
+                padding: 12,
+                borderRadius: 12,
+                background: "var(--card2)",
+                border: "1px solid var(--border)",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                background: showSpend ? "var(--card3)" : "#059669",
-                color: "white",
-                transition: "all .2s",
+                gap: 8,
               }}
             >
-              {showSpend ? <XIcon size={12} /> : <PlusIcon size={12} />}
-            </button>
-          </div>
+              <span style={{ fontSize: 12, color: "var(--text3)", whiteSpace: "nowrap" }}>Daily limit:</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>₹</span>
+              <input
+                type="number"
+                value={budgetInput}
+                onChange={(e) => setBudgetInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveBudget()}
+                placeholder="e.g. 1000"
+                autoFocus
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  background: "var(--card3)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "6px 10px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text)",
+                  outline: "none",
+                }}
+              />
+              <button
+                onClick={saveBudget}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: "pointer",
+                  background: "#059669",
+                  color: "white",
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingBudget(false)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  cursor: "pointer",
+                  background: "transparent",
+                  color: "var(--text3)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* Stats */}
           <div
