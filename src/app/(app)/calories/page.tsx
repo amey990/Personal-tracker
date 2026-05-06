@@ -37,9 +37,13 @@ export default function CaloriesPage() {
   // ── State ──
   const [selectedYM, setSelectedYM] = useState(currentYM);
   const [dailyGoal, setDailyGoal] = useState<number | null>(null);
+  const [dailyProteinGoal, setDailyProteinGoal] = useState<number | null>(null);
   const [goalInput, setGoalInput] = useState("");
+  const [proteinGoalInput, setProteinGoalInput] = useState("");
   const [goalSaved, setGoalSaved] = useState(false);
+  const [proteinSaved, setProteinSaved] = useState(false);
   const [editingGoal, setEditingGoal] = useState(false);
+  const [editingProtein, setEditingProtein] = useState(false);
 
   const [logs, setLogs] = useState<FoodLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
@@ -49,6 +53,7 @@ export default function CaloriesPage() {
   const [description, setDescription] = useState("");
   const [meal, setMeal] = useState<FoodLog["meal_type"]>("breakfast");
   const [manualKcal, setManualKcal] = useState("");
+  const [manualProtein, setManualProtein] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,9 +87,13 @@ export default function CaloriesPage() {
     if (data) {
       setDailyGoal(data.daily_calories);
       setGoalInput(String(data.daily_calories));
+      setDailyProteinGoal(data.daily_protein || null);
+      setProteinGoalInput(data.daily_protein ? String(data.daily_protein) : "");
     } else {
       setDailyGoal(null);
       setGoalInput("");
+      setDailyProteinGoal(null);
+      setProteinGoalInput("");
     }
   }
 
@@ -102,8 +111,11 @@ export default function CaloriesPage() {
 
   async function saveGoal() {
     if (!goalInput || isNaN(+goalInput)) return;
+    const payload: any = { user_id: userId, year_month: selectedYM, daily_calories: +goalInput };
+    if (dailyProteinGoal !== null) payload.daily_protein = dailyProteinGoal;
+
     await supabase.from("calorie_goal").upsert(
-      { user_id: userId, year_month: selectedYM, daily_calories: +goalInput },
+      payload,
       { onConflict: "user_id,year_month" }
     );
     setDailyGoal(+goalInput);
@@ -112,9 +124,28 @@ export default function CaloriesPage() {
     setTimeout(() => setGoalSaved(false), 2000);
   }
 
+  async function saveProteinGoal() {
+    if (!proteinGoalInput || isNaN(+proteinGoalInput)) return;
+    const payload: any = { user_id: userId, year_month: selectedYM, daily_protein: +proteinGoalInput };
+    if (dailyGoal !== null) payload.daily_calories = dailyGoal;
+
+    const { error } = await supabase.from("calorie_goal").upsert(
+      payload,
+      { onConflict: "user_id,year_month" }
+    );
+    if (!error) {
+      setDailyProteinGoal(+proteinGoalInput);
+      setProteinSaved(true);
+      setEditingProtein(false);
+      setTimeout(() => setProteinSaved(false), 2000);
+    }
+  }
+
   async function addLog() {
     const kcal = +manualKcal;
+    const protein = +manualProtein;
     if (!kcal || kcal <= 0) { setError("Valid calories required"); return; }
+    if (manualProtein && protein < 0) { setError("Valid protein required"); return; }
     if (!description.trim()) { setError("Description required"); return; }
     setAdding(true);
     await supabase.from("food_logs").insert({
@@ -123,11 +154,12 @@ export default function CaloriesPage() {
       meal_type: meal,
       description: description,
       calories: kcal,
-      protein: null,
+      protein: manualProtein ? protein : null,
     });
     // Reset form
     setDescription("");
     setManualKcal("");
+    setManualProtein("");
     setError("");
     await fetchLogs(userId);
     setAdding(false);
@@ -250,53 +282,117 @@ export default function CaloriesPage() {
         </div>
       </div>
 
-      {/* ── LOG FOOD FORM ── */}
-      <div style={{ background: "var(--card)", borderRadius: 20, border: "1px solid var(--border)", padding: "24px 28px" }}>
-        <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text3)", marginBottom: 18 }}>Log Food</p>
+      {/* ── LOG FOOD FORM & PROTEIN CARD ── */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "stretch" }}>
+        
+        {/* LOG FOOD FORM */}
+        <div style={{ flex: "1 1 400px", background: "var(--card)", borderRadius: 20, border: "1px solid var(--border)", padding: "24px 28px" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text3)", marginBottom: 18 }}>Log Food</p>
 
-        {/* Meal selector */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-          {MEALS.map(m => (
-            <button key={m.key} onClick={() => setMeal(m.key as FoodLog["meal_type"])}
-              style={{ padding: "6px 14px", borderRadius: 100, border: "1px solid", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s",
-                borderColor: meal === m.key ? "#a855f7" : "var(--border)",
-                background: meal === m.key ? "rgba(168,85,247,0.12)" : "transparent",
-                color: meal === m.key ? "#a855f7" : "var(--text3)",
-              }}>
-              {m.emoji} {m.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-          {/* Text input */}
-          <input
-            placeholder='Food description e.g. "200g oats"'
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            style={{ flex: "1 1 200px", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--card2)", color: "var(--text)", fontSize: 13, outline: "none" }}
-          />
-
-          {/* Kcal input */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--card2)" }}>
-            <input
-              type="number"
-              placeholder="0"
-              value={manualKcal}
-              onChange={e => setManualKcal(e.target.value)}
-              style={{ width: 60, background: "transparent", border: "none", color: "var(--text)", fontSize: 14, fontWeight: 700, outline: "none" }}
-            />
-            <span style={{ fontSize: 13, color: "var(--text3)", fontWeight: 600 }}>kcal</span>
+          {/* Meal selector */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            {MEALS.map(m => (
+              <button key={m.key} onClick={() => setMeal(m.key as FoodLog["meal_type"])}
+                style={{ padding: "6px 14px", borderRadius: 100, border: "1px solid", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s",
+                  borderColor: meal === m.key ? "#a855f7" : "var(--border)",
+                  background: meal === m.key ? "rgba(168,85,247,0.12)" : "transparent",
+                  color: meal === m.key ? "#a855f7" : "var(--text3)",
+                }}>
+                {m.emoji} {m.label}
+              </button>
+            ))}
           </div>
 
-          <button onClick={addLog} disabled={adding}
-            style={{ padding: "10px 24px", borderRadius: 12, border: "none", cursor: adding ? "wait" : "pointer",
-              background: "#10b981", color: "white", fontSize: 13, fontWeight: 700, transition: "all .2s", height: 42 }}>
-            {adding ? "Saving…" : "✓ Add to Log"}
-          </button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+            {/* Text input */}
+            <input
+              placeholder='Food description e.g. "200g oats"'
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              style={{ flex: "1 1 200px", padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--card2)", color: "var(--text)", fontSize: 13, outline: "none" }}
+            />
+
+            {/* Kcal input */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--card2)" }}>
+              <input
+                type="number"
+                placeholder="0"
+                value={manualKcal}
+                onChange={e => setManualKcal(e.target.value)}
+                style={{ width: 50, background: "transparent", border: "none", color: "var(--text)", fontSize: 14, fontWeight: 700, outline: "none" }}
+              />
+              <span style={{ fontSize: 13, color: "var(--text3)", fontWeight: 600 }}>kcal</span>
+            </div>
+
+            {/* Protein input */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--card2)" }}>
+              <input
+                type="number"
+                placeholder="0"
+                value={manualProtein}
+                onChange={e => setManualProtein(e.target.value)}
+                style={{ width: 40, background: "transparent", border: "none", color: "var(--text)", fontSize: 14, fontWeight: 700, outline: "none" }}
+              />
+              <span style={{ fontSize: 13, color: "var(--text3)", fontWeight: 600 }}>g</span>
+            </div>
+
+            <button onClick={addLog} disabled={adding}
+              style={{ padding: "10px 24px", borderRadius: 12, border: "none", cursor: adding ? "wait" : "pointer",
+                background: "#10b981", color: "white", fontSize: 13, fontWeight: 700, transition: "all .2s", height: 42 }}>
+              {adding ? "Saving…" : "✓ Add to Log"}
+            </button>
+          </div>
+
+          {error && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 10 }}>{error}</p>}
         </div>
 
-        {error && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 10 }}>{error}</p>}
+        {/* PROTEIN CARD */}
+        <div style={{ flex: "1 1 250px", background: "var(--card)", borderRadius: 20, border: "1px solid var(--border)", padding: "24px 28px", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text3)" }}>Protein Target</p>
+            {!editingProtein && dailyProteinGoal && (
+              <button onClick={() => setEditingProtein(true)} style={{ fontSize: 12, color: "#0ea5e9", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Edit</button>
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 16 }}>
+            <span style={{ fontSize: 36, fontWeight: 900, color: "#0ea5e9", lineHeight: 1 }}>{Math.round(totalProtein)}g</span>
+            <span style={{ fontSize: 13, color: "var(--text3)" }}>/ {dailyProteinGoal || "?"}g</span>
+          </div>
+
+          {/* Progress bar */}
+          {dailyProteinGoal ? (
+            <div style={{ height: 8, background: "var(--card2)", borderRadius: 4, overflow: "hidden", marginBottom: 16 }}>
+              <div style={{ height: "100%", width: `${Math.min((totalProtein / dailyProteinGoal) * 100, 100)}%`, background: "#0ea5e9", transition: "width .5s ease" }} />
+            </div>
+          ) : null}
+
+          {/* Edit form */}
+          {(!dailyProteinGoal || editingProtein) && (
+            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--card2)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 14px" }}>
+                <span style={{ fontSize: 13, color: "var(--text3)" }}>Target:</span>
+                <input
+                  type="number"
+                  placeholder="e.g. 150"
+                  value={proteinGoalInput}
+                  onChange={e => setProteinGoalInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && saveProteinGoal()}
+                  style={{ width: "100%", background: "transparent", border: "none", fontSize: 14, fontWeight: 700, padding: 0, outline: "none", color: "var(--text)" }}
+                />
+                <span style={{ fontSize: 13, color: "var(--text3)" }}>g</span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={saveProteinGoal} style={{ flex: 1, padding: "8px", borderRadius: 10, border: "none", cursor: "pointer", background: proteinSaved ? "#10b981" : "#0ea5e9", color: "white", fontSize: 13, fontWeight: 700, transition: "background .2s" }}>
+                  {proteinSaved ? "✓ Saved" : "Save"}
+                </button>
+                {editingProtein && dailyProteinGoal && (
+                  <button onClick={() => setEditingProtein(false)} style={{ padding: "8px 12px", borderRadius: 10, border: "none", cursor: "pointer", background: "var(--card2)", color: "var(--text3)", fontSize: 13 }}>Cancel</button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── TODAY'S LOG ── */}
