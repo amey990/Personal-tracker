@@ -386,8 +386,9 @@ export default function MonthlyPage() {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   // Calorie data
-  const [calsByDay, setCalsByDay] = useState<Record<string, { total: number; meals: Record<string, number> }>>({});
+  const [calsByDay, setCalsByDay] = useState<Record<string, { total: number; totalProtein: number; meals: Record<string, number> }>>({});
   const [calGoal, setCalGoal] = useState<number | null>(null);
+  const [proteinGoal, setProteinGoal] = useState<number | null>(null);
   const supabase = createClient();
 
   const monthStart = startOfMonth(currentDate);
@@ -408,21 +409,23 @@ export default function MonthlyPage() {
       supabase.from("tasks").select("*").eq("user_id", user.id).eq("active", true).order("position"),
       supabase.from("completions").select("*").eq("user_id", user.id)
         .gte("date", format(monthStart, "yyyy-MM-dd")).lte("date", format(monthEnd, "yyyy-MM-dd")),
-      supabase.from("food_logs").select("date,calories,meal_type").eq("user_id", user.id)
+      supabase.from("food_logs").select("date,calories,protein,meal_type").eq("user_id", user.id)
         .gte("date", format(monthStart, "yyyy-MM-dd")).lte("date", format(monthEnd, "yyyy-MM-dd")),
-      supabase.from("calorie_goal").select("daily_calories").eq("user_id", user.id).eq("year_month", ym).maybeSingle(),
+      supabase.from("calorie_goal").select("daily_calories,daily_protein").eq("user_id", user.id).eq("year_month", ym).maybeSingle(),
     ]);
     setTasks(taskData || []);
     setCompletions(completionData || []);
     // Aggregate calories by date and meal
-    const byDay: Record<string, { total: number; meals: Record<string, number> }> = {};
+    const byDay: Record<string, { total: number; totalProtein: number; meals: Record<string, number> }> = {};
     for (const row of (foodData || [])) {
-      if (!byDay[row.date]) byDay[row.date] = { total: 0, meals: {} };
+      if (!byDay[row.date]) byDay[row.date] = { total: 0, totalProtein: 0, meals: {} };
       byDay[row.date].total += Number(row.calories);
+      byDay[row.date].totalProtein += Number(row.protein || 0);
       byDay[row.date].meals[row.meal_type] = (byDay[row.date].meals[row.meal_type] || 0) + Number(row.calories);
     }
     setCalsByDay(byDay);
     setCalGoal(goalData?.daily_calories ?? null);
+    setProteinGoal(goalData?.daily_protein ?? null);
     setLoading(false);
   }
 
@@ -1024,10 +1027,12 @@ export default function MonthlyPage() {
                       : pct > 1.10 ? "#ef444440"
                       : pct > 0.90 ? "#f59e0b30"
                       : "#10b98140";
+                    const protein = calsByDay[ds]?.totalProtein || 0;
+                    const pGoal = proteinGoal || 120;
                     return (
                       <td key={day.toISOString()} style={{ padding: "12px 0", textAlign: "center" }}>
                         <div
-                          title={`${kcal} kcal${calGoal ? ` / ${calGoal} goal` : ""}`}
+                          title={`${kcal} kcal${calGoal ? ` / ${calGoal} goal` : ""}\n${protein}g protein / ${pGoal}g goal`}
                           style={{ width: "20px", height: "20px", margin: "0 auto", borderRadius: "6px", background: bg, border: `1px solid ${border}` }}
                         />
                       </td>
