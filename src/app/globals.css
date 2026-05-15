@@ -673,7 +673,7 @@ input::placeholder {
 
 .task-copy,
 .planner-row div,
-.course-row div {
+.course-copy {
   flex: 1;
   min-width: 0;
   display: grid;
@@ -771,6 +771,74 @@ input::placeholder {
 
 .course-row {
   background: var(--card2);
+  align-items: flex-start;
+}
+
+.course-progress {
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--card3);
+  margin-top: 4px;
+}
+
+.course-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.course-update {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.course-editor {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.course-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.course-title-row strong {
+  flex: 1;
+}
+
+.course-editor input {
+  min-height: 38px;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.course-editor button {
+  min-height: 42px;
+  border: 1px solid rgba(5, 150, 105, 0.45);
+  border-radius: 12px;
+  padding: 0 12px;
+  background: rgba(5, 150, 105, 0.14);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.course-editor-close {
+  width: 32px;
+  min-height: 32px !important;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0 !important;
+  background: transparent !important;
+  color: #ef4444 !important;
 }
 
 .streak-heading h1 {

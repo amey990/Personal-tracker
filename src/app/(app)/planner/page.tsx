@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addDays, format, isSameDay, isToday, startOfWeek } from "date-fns";
-import { BookOpen, Check, ChevronLeft, ChevronRight, Loader2, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Check, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Course, DailyPlanItem } from "@/lib/types";
 
@@ -21,6 +21,8 @@ export default function PlannerPage() {
   const [taskCourse, setTaskCourse] = useState("");
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [completedSections, setCompletedSections] = useState("");
 
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -113,6 +115,28 @@ export default function PlannerPage() {
   async function deleteItem(id: string) {
     await supabase.from("daily_plan_items").delete().eq("id", id);
     setItems((current) => current.filter((entry) => entry.id !== id));
+  }
+
+  async function updateCourseProgress(course: Course) {
+    const nextCompleted = Math.max(0, Number(completedSections) || 0);
+    const cappedCompleted = course.total_sections
+      ? Math.min(nextCompleted, course.total_sections)
+      : nextCompleted;
+
+    await supabase
+      .from("courses")
+      .update({ completed_sections: cappedCompleted })
+      .eq("id", course.id);
+
+    setCourses((current) =>
+      current.map((item) =>
+        item.id === course.id
+          ? { ...item, completed_sections: cappedCompleted }
+          : item,
+      ),
+    );
+    setEditingCourseId(null);
+    setCompletedSections("");
   }
 
   const doneItems = items.filter((item) => item.completed).length;
@@ -259,10 +283,56 @@ export default function PlannerPage() {
               return (
                 <div key={course.id} className="course-row">
                   <span style={{ background: course.color }} />
-                  <div>
-                    <strong>{course.name}</strong>
-                    <p>{percent}% complete</p>
+                  <div className="course-copy">
+                    <div className="course-title-row">
+                      <strong>{course.name}</strong>
+                      {editingCourseId === course.id && (
+                        <button
+                          type="button"
+                          className="course-editor-close"
+                          aria-label="Cancel update"
+                          onClick={() => {
+                            setEditingCourseId(null);
+                            setCompletedSections("");
+                          }}
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
+                    <p>
+                      {percent}% complete · {course.completed_sections}/{course.total_sections || 0} sections
+                    </p>
+                    <div className="course-progress">
+                      <span style={{ width: `${percent}%`, background: course.color }} />
+                    </div>
+                    {editingCourseId === course.id && (
+                      <div className="course-editor">
+                        <input
+                          type="number"
+                          value={completedSections}
+                          onChange={(event) => setCompletedSections(event.target.value)}
+                          placeholder="Completed sections"
+                          autoFocus
+                        />
+                        <button type="button" onClick={() => updateCourseProgress(course)}>
+                          Save
+                        </button>
+                      </div>
+                    )}
                   </div>
+                  {editingCourseId !== course.id && (
+                    <button
+                      type="button"
+                      className="small-button course-update"
+                      onClick={() => {
+                        setEditingCourseId(course.id);
+                        setCompletedSections(String(course.completed_sections));
+                      }}
+                    >
+                      Update
+                    </button>
+                  )}
                 </div>
               );
             })
