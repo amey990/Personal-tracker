@@ -378,32 +378,120 @@ export default function LoginPage() {
 
         /* Responsive */
         @media (max-width: 768px) {
+          .login-page {
+            min-height: 100dvh;
+            align-items: flex-start;
+            padding: 14px;
+            overflow-y: auto;
+          }
+
           .login-card {
             flex-direction: column;
-            max-width: 440px;
+            max-width: 390px;
             min-height: auto;
+            border-radius: 24px;
           }
 
           .login-form-section {
-            padding: 36px 28px;
+            padding: 20px 22px 24px;
           }
 
           .login-image-section {
-            height: 260px;
+            height: 154px;
             order: -1;
           }
 
+          .astronaut-image {
+            width: 58%;
+            max-width: 210px;
+            animation: none;
+            filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.22));
+          }
+
           .login-heading {
-            font-size: 26px;
+            font-size: 24px;
+            margin-bottom: 4px;
+          }
+
+          .login-subtitle {
+            font-size: 12px;
+            margin-bottom: 18px;
+          }
+
+          .form-label {
+            font-size: 12px;
+            margin-bottom: 6px;
+          }
+
+          .form-input-wrapper {
+            margin-bottom: 14px;
+          }
+
+          .form-input {
+            min-height: 44px;
+            padding: 10px 14px;
+            border-radius: 11px;
+            font-size: 13px;
+          }
+
+          .form-row {
+            margin-bottom: 16px;
+          }
+
+          .remember-label,
+          .forgot-link {
+            font-size: 11px;
+          }
+
+          .remember-checkbox {
+            width: 16px;
+            height: 16px;
+          }
+
+          .signin-btn,
+          .google-btn {
+            min-height: 44px;
+            padding: 11px;
+            border-radius: 12px;
+            font-size: 13px;
+          }
+
+          .signin-btn {
+            margin-bottom: 9px;
+          }
+
+          .login-footer {
+            margin-top: 18px;
+            font-size: 12px;
           }
 
           .blob {
-            filter: blur(40px);
+            filter: blur(34px);
           }
 
-          .blob-1 { width: 200px; height: 200px; }
-          .blob-2 { width: 160px; height: 160px; }
-          .blob-3 { width: 140px; height: 140px; }
+          .blob-1 { width: 170px; height: 170px; top: -20%; right: 6%; }
+          .blob-2 { width: 150px; height: 150px; bottom: -30%; left: 8%; }
+          .blob-3 { width: 110px; height: 110px; }
+          .blob-4,
+          .blob-5 { display: none; }
+        }
+
+        @media (max-width: 380px) {
+          .login-page {
+            padding: 10px;
+          }
+
+          .login-form-section {
+            padding: 18px 18px 22px;
+          }
+
+          .login-image-section {
+            height: 128px;
+          }
+
+          .login-heading {
+            font-size: 22px;
+          }
         }
 
         /* ===== Dark Mode ===== */
@@ -616,7 +704,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="signin-btn"
               >
-                {loading ? "Signing in…" : "Sign in"}
+                {loading ? "Signing in..." : "Sign in"}
               </button>
             </form>
 

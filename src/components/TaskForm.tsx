@@ -1,16 +1,24 @@
 "use client";
+
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { TaskCategory } from "@/lib/types";
+
+const CATEGORIES: { label: string; value: TaskCategory; color: string }[] = [
+  { label: "Habit", value: "habit", color: "#7c3aed" },
+  { label: "Diet", value: "diet", color: "#059669" },
+  { label: "Workout", value: "workout", color: "#dc2626" },
+];
 
 const COLORS = [
-  { label: "Violet", value: "#8b5cf6" },
-  { label: "Emerald", value: "#10b981" },
-  { label: "Amber", value: "#f59e0b" },
-  { label: "Rose", value: "#f43f5e" },
-  { label: "Sky", value: "#0ea5e9" },
-  { label: "Orange", value: "#f97316" },
-  { label: "Pink", value: "#ec4899" },
-  { label: "Teal", value: "#14b8a6" },
+  "#7c3aed",
+  "#059669",
+  "#0ea5e9",
+  "#d97706",
+  "#dc2626",
+  "#ec4899",
+  "#14b8a6",
+  "#6366f1",
 ];
 
 interface Props {
@@ -20,235 +28,166 @@ interface Props {
 
 export default function TaskForm({ onSave, onCancel }: Props) {
   const [name, setName] = useState("");
+  const [category, setCategory] = useState<TaskCategory>("habit");
   const [type, setType] = useState<"recurring" | "one_off">("recurring");
   const [targetDate, setTargetDate] = useState("");
-  const [color, setColor] = useState(COLORS[0].value);
+  const [color, setColor] = useState(CATEGORIES[0].color);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const supabase = createClient();
+
+  function selectCategory(next: TaskCategory) {
+    setCategory(next);
+    setColor(CATEGORIES.find((item) => item.value === next)?.color || color);
+  }
 
   async function handleSave() {
     if (!name.trim()) {
       setError("Task name is required");
       return;
     }
+
     if (type === "one_off" && !targetDate) {
-      setError("Please pick a date");
+      setError("Pick a date for one-time tasks");
       return;
     }
+
     setSaving(true);
+    setError("");
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+
+    if (!user) {
+      setSaving(false);
+      setError("Please sign in again");
+      return;
+    }
+
     const { error: dbError } = await supabase.from("tasks").insert({
       user_id: user.id,
       name: name.trim(),
+      category,
       type,
       target_date: type === "one_off" ? targetDate : null,
       color,
       position: Date.now(),
       active: true,
     });
+
     if (dbError) {
       setError(dbError.message);
       setSaving(false);
       return;
     }
+
     onSave();
   }
 
-  const label = (text: string) => (
-    <p
-      style={{
-        fontSize: "11px",
-        fontWeight: 600,
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        color: "var(--text3)",
-        marginBottom: "8px",
-      }}
-    >
-      {text}
-    </p>
-  );
-
   return (
-    <div
-      style={{
-        borderRadius: "16px",
-        padding: "28px",
-        background: "var(--card)",
-        border: "1px solid var(--border)",
-        borderTop: `3px solid ${color}`,
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-      }}
-    >
-      <h2 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)" }}>
-        New task
-      </h2>
-
-      {/* Name */}
+    <section className="mobile-card mobile-stack">
       <div>
-        {label("Name")}
-        <input
-          type="text"
-          placeholder="e.g. Gym, Read, Meditate…"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            setError("");
-          }}
-          autoFocus
-          style={{
-            width: "100%",
-            padding: "11px 14px",
-            borderRadius: "10px",
-            background: "var(--card2)",
-            border: "1px solid var(--border)",
-            color: "var(--text)",
-            fontSize: "14px",
-            outline: "none",
-          }}
-        />
+        <p className="eyebrow">New Task</p>
+        <h2 className="section-title">Add something to track</h2>
       </div>
 
-      {/* Frequency */}
+      <label className="field-label" htmlFor="task-name">
+        Task name
+      </label>
+      <input
+        id="task-name"
+        value={name}
+        onChange={(event) => {
+          setName(event.target.value);
+          setError("");
+        }}
+        placeholder="Morning walk, no sugar, gym..."
+        autoFocus
+      />
+
       <div>
-        {label("Frequency")}
-        <div style={{ display: "flex", gap: "10px" }}>
-          {(["recurring", "one_off"] as const).map((t) => (
+        <p className="field-label">Category</p>
+        <div className="segmented">
+          {CATEGORIES.map((item) => (
             <button
-              key={t}
-              onClick={() => setType(t)}
-              style={{
-                flex: 1,
-                padding: "10px",
-                borderRadius: "10px",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all .2s",
-                border: "1px solid",
-                background: type === t ? "#7c3aed" : "var(--card2)",
-                borderColor: type === t ? "#7c3aed" : "var(--border)",
-                color: type === t ? "#fff" : "var(--text2)",
-              }}
+              key={item.value}
+              type="button"
+              className={category === item.value ? "active" : ""}
+              onClick={() => selectCategory(item.value)}
             >
-              {t === "recurring" ? "🔁 Every day" : "📅 One-off"}
+              {item.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Date picker */}
+      <div>
+        <p className="field-label">Schedule</p>
+        <div className="segmented">
+          <button
+            type="button"
+            className={type === "recurring" ? "active" : ""}
+            onClick={() => setType("recurring")}
+          >
+            Every day
+          </button>
+          <button
+            type="button"
+            className={type === "one_off" ? "active" : ""}
+            onClick={() => setType("one_off")}
+          >
+            One time
+          </button>
+        </div>
+      </div>
+
       {type === "one_off" && (
-        <div>
-          {label("Date")}
+        <>
+          <label className="field-label" htmlFor="target-date">
+            Date
+          </label>
           <input
+            id="target-date"
             type="date"
             value={targetDate}
-            onChange={(e) => setTargetDate(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "11px 14px",
-              borderRadius: "10px",
-              background: "var(--card2)",
-              border: "1px solid var(--border)",
-              color: "var(--text)",
-              fontSize: "14px",
-              outline: "none",
-            }}
+            onChange={(event) => setTargetDate(event.target.value)}
           />
-        </div>
+        </>
       )}
 
-      {/* Color picker */}
       <div>
-        {label("Color")}
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          {COLORS.map((c) => (
+        <p className="field-label">Color</p>
+        <div className="color-grid">
+          {COLORS.map((item) => (
             <button
-              key={c.value}
-              onClick={() => setColor(c.value)}
-              title={c.label}
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                background: c.value,
-                border: "none",
-                cursor: "pointer",
-                flexShrink: 0,
-                transition: "transform .15s, box-shadow .15s",
-                transform: color === c.value ? "scale(1.2)" : "scale(1)",
-                boxShadow:
-                  color === c.value
-                    ? `0 0 0 2px var(--card), 0 0 0 4px ${c.value}`
-                    : "none",
-              }}
+              key={item}
+              type="button"
+              aria-label={`Use ${item}`}
+              className={color === item ? "selected" : ""}
+              onClick={() => setColor(item)}
+              style={{ background: item }}
             />
           ))}
         </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div
-          style={{
-            padding: "10px 14px",
-            borderRadius: "10px",
-            background: "#ef444415",
-            border: "1px solid #ef444430",
-            color: "#ef4444",
-            fontSize: "13px",
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <p className="form-error">{error}</p>}
 
-      {/* Actions */}
-      <div style={{ display: "flex", gap: "10px", paddingTop: "4px" }}>
-        <button
-          onClick={onCancel}
-          style={{
-            flex: 1,
-            padding: "11px",
-            borderRadius: "10px",
-            fontSize: "13px",
-            fontWeight: 600,
-            cursor: "pointer",
-            border: "1px solid var(--border)",
-            background: "var(--card2)",
-            color: "var(--text2)",
-            transition: "all .2s",
-          }}
-        >
+      <div className="form-actions">
+        <button type="button" className="ghost-button" onClick={onCancel}>
           Cancel
         </button>
         <button
+          type="button"
+          className="primary-button"
           onClick={handleSave}
           disabled={saving}
-          style={{
-            flex: 1,
-            padding: "11px",
-            borderRadius: "10px",
-            fontSize: "13px",
-            fontWeight: 700,
-            cursor: saving ? "not-allowed" : "pointer",
-            border: "none",
-            background: color,
-            color: "#fff",
-            opacity: saving ? 0.6 : 1,
-            transition: "opacity .2s",
-          }}
+          style={{ background: color }}
         >
-          {saving ? "Saving…" : "Save task"}
+          {saving ? "Saving..." : "Save task"}
         </button>
       </div>
-    </div>
+    </section>
   );
 }

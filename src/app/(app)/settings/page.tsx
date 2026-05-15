@@ -1,455 +1,81 @@
-// "use client";
-// import { useState, useEffect } from "react";
-// import { createClient } from "@/lib/supabase/client";
-// import { Task } from "@/lib/types";
-// import TaskForm from "@/components/TaskForm";
-// import TaskItem from "@/components/TaskItem";
-
-// function BudgetSetting() {
-//   const [limit, setLimit] = useState("");
-//   const [current, setCurrent] = useState<number | null>(null);
-//   const [saved, setSaved] = useState(false);
-//   const supabase = createClient();
-
-//   useEffect(() => {
-//     async function load() {
-//       const {
-//         data: { user },
-//       } = await supabase.auth.getUser();
-//       if (!user) return;
-//       const { data } = await supabase
-//         .from("budget_settings")
-//         .select("*")
-//         .eq("user_id", user.id)
-//         .single();
-//       if (data) {
-//         setCurrent(data.daily_limit);
-//         setLimit(String(data.daily_limit));
-//       }
-//     }
-//     load();
-//   }, []);
-
-//   async function save() {
-//     const {
-//       data: { user },
-//     } = await supabase.auth.getUser();
-//     if (!user || !limit) return;
-//     await supabase
-//       .from("budget_settings")
-//       .upsert({ user_id: user.id, daily_limit: Number(limit) });
-//     setCurrent(Number(limit));
-//     setSaved(true);
-//     setTimeout(() => setSaved(false), 2000);
-//   }
-
-//   return (
-//     <div className="bg-gray-900 border border-gray-800 rounded-2xl px-5 py-4">
-//       <div className="flex items-center justify-between gap-4 flex-wrap">
-//         <div>
-//           <p className="text-white text-sm font-medium">Daily spend budget</p>
-//           <p className="text-gray-600 text-xs mt-0.5">
-//             {current
-//               ? `Current: ₹${Number(current).toLocaleString("en-IN")}`
-//               : "Not set yet"}
-//           </p>
-//         </div>
-//         <div className="flex items-center gap-2">
-//           <span className="text-gray-500 text-sm">₹</span>
-//           <input
-//             type="number"
-//             placeholder="e.g. 1000"
-//             value={limit}
-//             onChange={(e) => setLimit(e.target.value)}
-//             onKeyDown={(e) => e.key === "Enter" && save()}
-//             className="w-28 bg-gray-800 text-white rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-violet-500"
-//           />
-//           <button
-//             onClick={save}
-//             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${saved ? "bg-emerald-600 text-white" : "bg-violet-600 hover:bg-violet-500 text-white"}`}
-//           >
-//             {saved ? "✓ Saved" : "Save"}
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default function SettingsPage() {
-//   const [tasks, setTasks] = useState<Task[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [showForm, setShowForm] = useState(false);
-//   const supabase = createClient();
-
-//   async function fetchTasks() {
-//     const {
-//       data: { user },
-//     } = await supabase.auth.getUser();
-//     if (!user) return;
-//     const { data } = await supabase
-//       .from("tasks")
-//       .select("*")
-//       .eq("user_id", user.id)
-//       .order("position");
-//     setTasks(data || []);
-//     setLoading(false);
-//   }
-
-//   useEffect(() => {
-//     fetchTasks();
-//   }, []);
-
-//   async function handleDelete(taskId: string) {
-//     await supabase.from("tasks").delete().eq("id", taskId);
-//     setTasks((prev) => prev.filter((t) => t.id !== taskId));
-//   }
-
-//   async function handleToggleActive(task: Task) {
-//     const updated = { ...task, active: !task.active };
-//     await supabase
-//       .from("tasks")
-//       .update({ active: updated.active })
-//       .eq("id", task.id);
-//     setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
-//   }
-
-//   return (
-//     <div className="space-y-6 max-w-3xl">
-//       {/* Header */}
-//       <div className="flex items-center justify-between">
-//         <div>
-//           <h1 className="text-2xl font-semibold text-white">Settings</h1>
-//           <p className="text-gray-500 text-sm mt-1">
-//             Manage tasks and preferences
-//           </p>
-//         </div>
-//         <button
-//           onClick={() => setShowForm(!showForm)}
-//           className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all"
-//         >
-//           <span className="text-lg leading-none">+</span>
-//           Add task
-//         </button>
-//       </div>
-
-//       {/* Budget */}
-//       <div>
-//         <p className="text-xs text-gray-600 uppercase tracking-widest mb-3">
-//           Finance
-//         </p>
-//         <BudgetSetting />
-//       </div>
-
-//       {/* Add task form */}
-//       {showForm && (
-//         <TaskForm
-//           onSave={() => {
-//             setShowForm(false);
-//             fetchTasks();
-//           }}
-//           onCancel={() => setShowForm(false)}
-//         />
-//       )}
-
-//       {/* Task list */}
-//       <div>
-//         <p className="text-xs text-gray-600 uppercase tracking-widest mb-3">
-//           Daily habits
-//         </p>
-//         {loading ? (
-//           <div className="space-y-3">
-//             {[1, 2, 3].map((i) => (
-//               <div
-//                 key={i}
-//                 className="h-16 bg-gray-900 rounded-2xl animate-pulse"
-//               />
-//             ))}
-//           </div>
-//         ) : tasks.length === 0 ? (
-//           <div className="text-center py-16 text-gray-600">
-//             <div className="text-4xl mb-3">📋</div>
-//             <p className="text-base">No tasks yet</p>
-//             <p className="text-sm mt-1 text-gray-700">
-//               Click "+ Add task" to get started
-//             </p>
-//           </div>
-//         ) : (
-//           <div className="space-y-3">
-//             <p className="text-xs text-gray-700">
-//               {tasks.length} task{tasks.length !== 1 ? "s" : ""}
-//             </p>
-//             {tasks.map((task) => (
-//               <TaskItem
-//                 key={task.id}
-//                 task={task}
-//                 onDelete={handleDelete}
-//                 onToggleActive={handleToggleActive}
-//                 onRename={fetchTasks}
-//               />
-//             ))}
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
-import { useState, useEffect } from "react";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ClipboardList, Loader2, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Task } from "@/lib/types";
+import { Task, TaskCategory } from "@/lib/types";
 import TaskForm from "@/components/TaskForm";
 import TaskItem from "@/components/TaskItem";
 
-function BudgetSetting() {
-  const [limit, setLimit] = useState("");
-  const [current, setCurrent] = useState<number | null>(null);
-  const [saved, setSaved] = useState(false);
-  const supabase = createClient();
-
-  useEffect(() => {
-    async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("budget_settings")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-      if (data) {
-        setCurrent(data.daily_limit);
-        setLimit(String(data.daily_limit));
-      }
-    }
-    load();
-  }, []);
-
-  async function save() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !limit || isNaN(+limit) || +limit <= 0) return;
-    await supabase
-      .from("budget_settings")
-      .upsert({ user_id: user.id, daily_limit: Number(limit) });
-    setCurrent(Number(limit));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  return (
-    <div
-      style={{
-        borderRadius: 16,
-        background: "var(--card)",
-        border: "1px solid var(--border)",
-        padding: "20px 24px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <p
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "var(--text)",
-              margin: 0,
-              marginBottom: 4,
-            }}
-          >
-            Daily Spend Budget
-          </p>
-          <p
-            style={{
-              fontSize: 12,
-              color: "var(--text3)",
-              margin: 0,
-            }}
-          >
-            {current
-              ? `Current: ₹${Number(current).toLocaleString("en-IN")} / day`
-              : "Not set yet — set a daily spending limit"}
-          </p>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
-            ₹
-          </span>
-          <input
-            type="number"
-            placeholder="e.g. 1000"
-            value={limit}
-            onChange={(e) => setLimit(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && save()}
-            style={{
-              width: 120,
-              background: "var(--card2)",
-              border: "1px solid var(--border)",
-              borderRadius: 10,
-              padding: "8px 12px",
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--text)",
-              outline: "none",
-            }}
-          />
-          <button
-            onClick={save}
-            style={{
-              padding: "8px 18px",
-              borderRadius: 10,
-              border: "none",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 700,
-              color: "white",
-              background: saved
-                ? "#059669"
-                : "linear-gradient(135deg, #7c3aed, #a855f7)",
-              transition: "all .3s",
-            }}
-          >
-            {saved ? "✓ Saved" : "Save"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const FILTERS: { label: string; value: TaskCategory | "all" }[] = [
+  { label: "All", value: "all" },
+  { label: "Habits", value: "habit" },
+  { label: "Diet", value: "diet" },
+  { label: "Workout", value: "workout" },
+];
 
 export default function SettingsPage() {
+  const supabase = useMemo(() => createClient(), []);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const supabase = createClient();
+  const [filter, setFilter] = useState<TaskCategory | "all">("all");
 
-  async function fetchTasks() {
+  const fetchTasks = useCallback(async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
+
     const { data } = await supabase
       .from("tasks")
       .select("*")
       .eq("user_id", user.id)
       .order("position");
-    setTasks(data || []);
+
+    setTasks(
+      ((data || []) as Task[]).map((task) => ({
+        ...task,
+        category: task.category || "habit",
+      })),
+    );
     setLoading(false);
-  }
+  }, [supabase]);
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    const timer = window.setTimeout(() => {
+      void fetchTasks();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [fetchTasks]);
 
   async function handleDelete(id: string) {
     await supabase.from("tasks").delete().eq("id", id);
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setTasks((current) => current.filter((task) => task.id !== id));
   }
 
   async function handleToggleActive(task: Task) {
     const updated = { ...task, active: !task.active };
-    await supabase
-      .from("tasks")
-      .update({ active: updated.active })
-      .eq("id", task.id);
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+    await supabase.from("tasks").update({ active: updated.active }).eq("id", task.id);
+    setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
   }
 
+  const visibleTasks =
+    filter === "all" ? tasks : tasks.filter((task) => (task.category || "habit") === filter);
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "32px",
-        maxWidth: "768px",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: "16px",
-        }}
-      >
+    <div className="mobile-page">
+      <section className="page-heading">
         <div>
-          <p
-            style={{
-              fontSize: "11px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: "var(--text3)",
-              marginBottom: "4px",
-            }}
-          >
-            Task Management
-          </p>
-          <h1
-            style={{
-              fontSize: "36px",
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
-              color: "var(--text)",
-              lineHeight: 1.1,
-            }}
-          >
-            Task Manager
-          </h1>
+          <p className="eyebrow">Task Manager</p>
+          <h1>Build your checklists</h1>
+          <p>Everything added here appears on the dashboard calendar.</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{
-            marginTop: "8px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 20px",
-            borderRadius: "12px",
-            fontSize: "13px",
-            fontWeight: 700,
-            color: showForm ? "var(--text2)" : "#fff",
-            cursor: "pointer",
-            border: "1px solid",
-            borderColor: showForm ? "var(--border)" : "transparent",
-            background: showForm ? "var(--card)" : "#a855f7",
-            transition: "all .2s",
-          }}
-        >
-          {showForm ? "✕ Cancel" : "+ Add task"}
+        <button type="button" className="fab-button" onClick={() => setShowForm((open) => !open)}>
+          <Plus size={22} />
         </button>
-      </div>
+      </section>
 
-      {/* Budget Setting */}
-      <div>
-        <p
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            color: "var(--text3)",
-            marginBottom: "12px",
-          }}
-        >
-          Finance
-        </p>
-        <BudgetSetting />
-      </div>
-
-      {/* Task form */}
       {showForm && (
         <TaskForm
           onSave={() => {
@@ -460,86 +86,43 @@ export default function SettingsPage() {
         />
       )}
 
-      {/* Tasks */}
-      <div>
-        <p
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            color: "var(--text3)",
-            marginBottom: "16px",
-          }}
-        >
-          Daily habits · {tasks.length} task{tasks.length !== 1 ? "s" : ""}
-        </p>
+      <section className="segmented wide">
+        {FILTERS.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            className={filter === item.value ? "active" : ""}
+            onClick={() => setFilter(item.value)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </section>
 
-        {loading ? (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-          >
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                style={{
-                  height: "64px",
-                  borderRadius: "16px",
-                  background: "var(--card)",
-                  animation: "pulse 2s infinite",
-                }}
-              />
-            ))}
-          </div>
-        ) : tasks.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "80px 0",
-              borderRadius: "16px",
-              background: "var(--card)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <p style={{ fontSize: "36px", marginBottom: "12px" }}>📋</p>
-            <p
-              style={{
-                fontSize: "18px",
-                fontWeight: 700,
-                marginBottom: "4px",
-                color: "var(--text)",
-              }}
-            >
-              No tasks yet
-            </p>
-            <p style={{ fontSize: "13px", color: "var(--text3)" }}>
-              Click "+ Add task" above to create your first habit
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                style={{
-                  borderRadius: "16px",
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderLeft: `3px solid ${task.color}`,
-                  overflow: "hidden",
-                }}
-              >
-                <TaskItem
-                  task={task}
-                  onDelete={handleDelete}
-                  onToggleActive={handleToggleActive}
-                  onRename={fetchTasks}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <div className="center-state">
+          <Loader2 className="spin" size={24} />
+          <p>Loading tasks...</p>
+        </div>
+      ) : visibleTasks.length === 0 ? (
+        <section className="center-state mobile-card">
+          <ClipboardList size={32} />
+          <h2>No tasks here yet</h2>
+          <p>Tap the plus button to add your first habit, diet item, or workout.</p>
+        </section>
+      ) : (
+        <section className="task-list">
+          {visibleTasks.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              onDelete={handleDelete}
+              onToggleActive={handleToggleActive}
+              onRename={fetchTasks}
+            />
+          ))}
+        </section>
+      )}
     </div>
   );
 }

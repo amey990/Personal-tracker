@@ -26,12 +26,14 @@
 // }
 
 export type TaskType = "recurring" | "one_off";
+export type TaskCategory = "habit" | "diet" | "workout";
 
 export interface Task {
   id: string;
   user_id: string;
   name: string;
   type: TaskType;
+  category: TaskCategory;
   target_date?: string;
   color: string;
   position: number;
@@ -116,4 +118,4 @@ export interface DailyPlanItem {
   created_at: string;
   // Joined field (from query)
   course?: Course;
-}
+}
