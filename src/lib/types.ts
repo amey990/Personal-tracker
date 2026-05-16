@@ -1,30 +1,3 @@
-// export type TaskType = "recurring" | "one_off";
-
-// export interface Task {
-//   id: string;
-//   user_id: string;
-//   name: string;
-//   type: TaskType;
-//   target_date?: string;
-//   color: string;
-//   position: number;
-//   active: boolean; // ← add this line
-//   created_at: string;
-// }
-
-// export interface Completion {
-//   id: string;
-//   user_id: string;
-//   task_id: string;
-//   date: string;
-//   completed: boolean;
-// }
-
-// export interface TaskWithStatus extends Task {
-//   completed: boolean;
-//   completion_id?: string;
-// }
-
 export type TaskType = "recurring" | "one_off";
 export type TaskCategory = "habit" | "diet" | "workout";
 
@@ -35,6 +8,8 @@ export interface Task {
   type: TaskType;
   category: TaskCategory;
   target_date?: string;
+  scheduled_weekday?: number | null;
+  exercises?: string[] | null;
   color: string;
   position: number;
   active: boolean;
@@ -47,11 +22,13 @@ export interface Completion {
   task_id: string;
   date: string;
   completed: boolean;
+  completed_exercises?: number[] | null;
 }
 
 export interface TaskWithStatus extends Task {
   completed: boolean;
   completion_id?: string;
+  completedExercises?: number[];
 }
 
 export interface Spend {

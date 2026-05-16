@@ -301,7 +301,7 @@ export default function PlannerPage() {
                       )}
                     </div>
                     <p>
-                      {percent}% complete · {course.completed_sections}/{course.total_sections || 0} sections
+                      {percent}% complete - {course.completed_sections}/{course.total_sections || 0} sections
                     </p>
                     <div className="course-progress">
                       <span style={{ width: `${percent}%`, background: course.color }} />

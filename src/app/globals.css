@@ -526,6 +526,49 @@ input::placeholder {
   text-decoration: line-through;
 }
 
+.workout-session {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.workout-session + .workout-session {
+  margin-top: 8px;
+}
+
+.workout-session-head,
+.exercise-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workout-session-head {
+  justify-content: space-between;
+  padding: 2px 2px 0;
+}
+
+.workout-session-head strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.workout-session-head span {
+  flex: 0 0 auto;
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.workout-exercise-list {
+  display: grid;
+  gap: 4px;
+}
+
 .check-box {
   width: 28px;
   height: 28px;
@@ -568,6 +611,10 @@ input::placeholder {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.segmented.weekdays {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
 .segmented button {
   min-height: 42px;
   border: 0;
@@ -600,6 +647,36 @@ input::placeholder {
 .color-grid button.selected {
   outline: 3px solid var(--text);
   outline-offset: 3px;
+}
+
+.exercise-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.exercise-fields .field-label {
+  margin-bottom: 0;
+}
+
+.exercise-add {
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.exercise-input-row input {
+  flex: 1;
+}
+
+.exercise-input-row button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .form-actions {

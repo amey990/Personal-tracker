@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pause, Pencil, Play, Trash2, X } from "lucide-react";
 import { Task } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
+import { getTaskScheduleLabel } from "@/lib/taskSchedule";
 
 const CATEGORY_LABELS = {
   habit: "Habit",
@@ -65,9 +66,9 @@ export default function TaskItem({
           <>
             <strong>{task.name}</strong>
             <span>
-              {CATEGORY_LABELS[task.category || "habit"]} ·{" "}
-              {task.type === "recurring" ? "Every day" : task.target_date}
-              {task.active === false ? " · Paused" : ""}
+              {CATEGORY_LABELS[task.category || "habit"]} -{" "}
+              {getTaskScheduleLabel(task)}
+              {task.active === false ? " - Paused" : ""}
             </span>
           </>
         )}

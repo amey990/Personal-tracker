@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TaskCategory } from "@/lib/types";
+import { WEEKDAYS } from "@/lib/taskSchedule";
 
 const CATEGORIES: { label: string; value: TaskCategory; color: string }[] = [
   { label: "Habit", value: "habit", color: "#7c3aed" },
@@ -31,6 +32,8 @@ export default function TaskForm({ onSave, onCancel }: Props) {
   const [category, setCategory] = useState<TaskCategory>("habit");
   const [type, setType] = useState<"recurring" | "one_off">("recurring");
   const [targetDate, setTargetDate] = useState("");
+  const [scheduledWeekday, setScheduledWeekday] = useState(1);
+  const [exercises, setExercises] = useState([""]);
   const [color, setColor] = useState(CATEGORIES[0].color);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +42,10 @@ export default function TaskForm({ onSave, onCancel }: Props) {
   function selectCategory(next: TaskCategory) {
     setCategory(next);
     setColor(CATEGORIES.find((item) => item.value === next)?.color || color);
+    if (next === "workout") {
+      setType("recurring");
+      setTargetDate("");
+    }
   }
 
   async function handleSave() {
@@ -47,8 +54,17 @@ export default function TaskForm({ onSave, onCancel }: Props) {
       return;
     }
 
-    if (type === "one_off" && !targetDate) {
+    if (category !== "workout" && type === "one_off" && !targetDate) {
       setError("Pick a date for one-time tasks");
+      return;
+    }
+
+    const workoutExercises = exercises
+      .map((exercise) => exercise.trim())
+      .filter(Boolean);
+
+    if (category === "workout" && workoutExercises.length === 0) {
+      setError("Add at least one exercise");
       return;
     }
 
@@ -69,8 +85,10 @@ export default function TaskForm({ onSave, onCancel }: Props) {
       user_id: user.id,
       name: name.trim(),
       category,
-      type,
-      target_date: type === "one_off" ? targetDate : null,
+      type: category === "workout" ? "recurring" : type,
+      target_date: category !== "workout" && type === "one_off" ? targetDate : null,
+      scheduled_weekday: category === "workout" ? scheduledWeekday : null,
+      exercises: category === "workout" ? workoutExercises : null,
       color,
       position: Date.now(),
       active: true,
@@ -122,37 +140,99 @@ export default function TaskForm({ onSave, onCancel }: Props) {
         </div>
       </div>
 
-      <div>
-        <p className="field-label">Schedule</p>
-        <div className="segmented">
-          <button
-            type="button"
-            className={type === "recurring" ? "active" : ""}
-            onClick={() => setType("recurring")}
-          >
-            Every day
-          </button>
-          <button
-            type="button"
-            className={type === "one_off" ? "active" : ""}
-            onClick={() => setType("one_off")}
-          >
-            One time
-          </button>
-        </div>
-      </div>
-
-      {type === "one_off" && (
+      {category === "workout" ? (
         <>
-          <label className="field-label" htmlFor="target-date">
-            Date
-          </label>
-          <input
-            id="target-date"
-            type="date"
-            value={targetDate}
-            onChange={(event) => setTargetDate(event.target.value)}
-          />
+          <div>
+            <p className="field-label">Workout day</p>
+            <div className="segmented weekdays">
+              {WEEKDAYS.map((day) => (
+                <button
+                  key={day.value}
+                  type="button"
+                  className={scheduledWeekday === day.value ? "active" : ""}
+                  onClick={() => setScheduledWeekday(day.value)}
+                >
+                  {day.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="exercise-fields">
+            <div className="section-head">
+              <p className="field-label">Exercises</p>
+              <button
+                type="button"
+                className="small-button exercise-add"
+                onClick={() => setExercises((current) => [...current, ""])}
+              >
+                Add
+              </button>
+            </div>
+            {exercises.map((exercise, index) => (
+              <div key={index} className="exercise-input-row">
+                <input
+                  value={exercise}
+                  onChange={(event) =>
+                    setExercises((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index ? event.target.value : item,
+                      ),
+                    )
+                  }
+                  placeholder={`Exercise ${index + 1}`}
+                />
+                {exercises.length > 1 && (
+                  <button
+                    type="button"
+                    aria-label="Remove exercise"
+                    onClick={() =>
+                      setExercises((current) =>
+                        current.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <p className="field-label">Schedule</p>
+            <div className="segmented">
+              <button
+                type="button"
+                className={type === "recurring" ? "active" : ""}
+                onClick={() => setType("recurring")}
+              >
+                Every day
+              </button>
+              <button
+                type="button"
+                className={type === "one_off" ? "active" : ""}
+                onClick={() => setType("one_off")}
+              >
+                One time
+              </button>
+            </div>
+          </div>
+
+          {type === "one_off" && (
+            <>
+              <label className="field-label" htmlFor="target-date">
+                Date
+              </label>
+              <input
+                id="target-date"
+                type="date"
+                value={targetDate}
+                onChange={(event) => setTargetDate(event.target.value)}
+              />
+            </>
+          )}
         </>
       )}
 

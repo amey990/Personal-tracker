@@ -95,7 +95,7 @@ export default function SignupPage() {
                 fontSize: "24px",
               }}
             >
-              ✓
+              OK
             </div>
             <h2
               style={{
@@ -271,7 +271,7 @@ export default function SignupPage() {
                   marginTop: "4px",
                 }}
               >
-                {loading ? "Creating account…" : "Create account"}
+                {loading ? "Creating account..." : "Create account"}
               </button>
             </form>
 

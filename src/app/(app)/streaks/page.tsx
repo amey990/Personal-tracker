@@ -14,6 +14,7 @@ import {
 import { ChevronLeft, ChevronRight, Dumbbell, Loader2, Sparkles, Utensils } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Task, TaskCategory } from "@/lib/types";
+import { isTaskActiveOnDate } from "@/lib/taskSchedule";
 
 const SECTIONS = [
   { key: "habit" as TaskCategory, title: "Habits", color: "#7c3aed", icon: Sparkles },
@@ -24,13 +25,10 @@ const SECTIONS = [
 type CompletionRow = {
   task_id: string;
   date: string;
+  completed: boolean;
 };
 
 type DayStatus = Record<TaskCategory, boolean | null>;
-
-function isTaskActiveOnDate(task: Task, date: string) {
-  return task.type === "recurring" || task.target_date === date;
-}
 
 export default function StreaksPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -69,7 +67,7 @@ export default function StreaksPage() {
           .order("position"),
         supabase
           .from("completions")
-          .select("task_id, date")
+          .select("task_id, date, completed")
           .eq("user_id", userId)
           .gte("date", monthStartKey)
           .lte("date", monthEndKey),
@@ -92,7 +90,7 @@ export default function StreaksPage() {
     const date = format(day, "yyyy-MM-dd");
     const status = SECTIONS.reduce((acc, section) => {
       const categoryTasks = tasks.filter(
-        (task) => (task.category || "habit") === section.key && isTaskActiveOnDate(task, date),
+        (task) => (task.category || "habit") === section.key && isTaskActiveOnDate(task, day, date),
       );
       if (categoryTasks.length === 0) {
         acc[section.key] = null;
@@ -100,7 +98,12 @@ export default function StreaksPage() {
       }
 
       acc[section.key] = categoryTasks.every((task) =>
-        completions.some((completion) => completion.task_id === task.id && completion.date === date),
+        completions.some(
+          (completion) =>
+            completion.task_id === task.id &&
+            completion.date === date &&
+            completion.completed,
+        ),
       );
       return acc;
     }, {} as DayStatus);
