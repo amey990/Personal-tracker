@@ -14,7 +14,7 @@ import {
 import { ChevronLeft, ChevronRight, Dumbbell, Loader2, Sparkles, Utensils } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Task, TaskCategory } from "@/lib/types";
-import { isTaskActiveOnDate } from "@/lib/taskSchedule";
+import { getWorkoutExercises, isTaskActiveOnDate } from "@/lib/taskSchedule";
 
 const SECTIONS = [
   { key: "habit" as TaskCategory, title: "Habits", color: "#7c3aed", icon: Sparkles },
@@ -26,9 +26,30 @@ type CompletionRow = {
   task_id: string;
   date: string;
   completed: boolean;
+  completed_exercises?: number[] | null;
 };
 
-type DayStatus = Record<TaskCategory, boolean | null>;
+type MissedItem = {
+  taskId: string;
+  title: string;
+  exercise?: string;
+};
+
+type CategoryDay = {
+  day: Date;
+  date: string;
+  total: number;
+  done: number;
+  status: "none" | "complete" | "partial" | "missed";
+  missed: MissedItem[];
+};
+
+type DayStatus = Record<TaskCategory, CategoryDay>;
+
+type SelectedDay = {
+  section: (typeof SECTIONS)[number];
+  item: CategoryDay;
+} | null;
 
 export default function StreaksPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -37,6 +58,7 @@ export default function StreaksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [completions, setCompletions] = useState<CompletionRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDay, setSelectedDay] = useState<SelectedDay>(null);
 
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
@@ -67,7 +89,7 @@ export default function StreaksPage() {
           .order("position"),
         supabase
           .from("completions")
-          .select("task_id, date, completed")
+          .select("task_id, date, completed, completed_exercises")
           .eq("user_id", userId)
           .gte("date", monthStartKey)
           .lte("date", monthEndKey),
@@ -86,40 +108,87 @@ export default function StreaksPage() {
     loadMonth();
   }, [monthEndKey, monthStartKey, supabase, userId]);
 
-  const dayStatuses = days.map((day) => {
+  const getCategoryDay = (section: (typeof SECTIONS)[number], day: Date): CategoryDay => {
     const date = format(day, "yyyy-MM-dd");
-    const status = SECTIONS.reduce((acc, section) => {
-      const categoryTasks = tasks.filter(
-        (task) => (task.category || "habit") === section.key && isTaskActiveOnDate(task, day, date),
+    const categoryTasks = tasks.filter(
+      (task) => (task.category || "habit") === section.key && isTaskActiveOnDate(task, day, date),
+    );
+
+    if (categoryTasks.length === 0) {
+      return { day, date, total: 0, done: 0, status: "none", missed: [] };
+    }
+
+    const taskResults = categoryTasks.map((task) => {
+      const completion = completions.find(
+        (item) => item.task_id === task.id && item.date === date,
       );
-      if (categoryTasks.length === 0) {
-        acc[section.key] = null;
-        return acc;
+
+      if (section.key !== "workout") {
+        return {
+          done: Boolean(completion?.completed),
+          missed: completion?.completed ? [] : [{ taskId: task.id, title: task.name }],
+        };
       }
 
-      acc[section.key] = categoryTasks.every((task) =>
-        completions.some(
-          (completion) =>
-            completion.task_id === task.id &&
-            completion.date === date &&
-            completion.completed,
-        ),
-      );
+      const exercises = getWorkoutExercises(task);
+      const completedExercises = Array.isArray(completion?.completed_exercises)
+        ? completion.completed_exercises
+        : [];
+
+      if (exercises.length === 0) {
+        return {
+          done: Boolean(completion?.completed),
+          missed: completion?.completed ? [] : [{ taskId: task.id, title: task.name }],
+        };
+      }
+
+      const missedExercises = exercises
+        .map((exercise, index) => ({ exercise, index }))
+        .filter(({ index }) => !completedExercises.includes(index))
+        .map(({ exercise }) => ({ taskId: task.id, title: task.name, exercise }));
+
+      return {
+        done: missedExercises.length === 0,
+        missed: missedExercises,
+      };
+    });
+
+    const done = taskResults.filter((item) => item.done).length;
+    return {
+      day,
+      date,
+      total: categoryTasks.length,
+      done,
+      status:
+        done === categoryTasks.length
+          ? "complete"
+          : done === 0
+            ? "missed"
+            : "partial",
+      missed: taskResults.flatMap((item) => item.missed),
+    };
+  };
+
+  const dayStatuses = days.map((day) => {
+    const status = SECTIONS.reduce((acc, section) => {
+      acc[section.key] = getCategoryDay(section, day);
       return acc;
     }, {} as DayStatus);
 
-    return { day, date, status };
+    return { day, date: format(day, "yyyy-MM-dd"), status };
   });
 
   const summary = SECTIONS.map((section) => {
-    const eligibleDays = dayStatuses.filter((item) => item.status[section.key] !== null);
-    const completeDays = eligibleDays.filter((item) => item.status[section.key] === true).length;
+    const eligibleDays = dayStatuses.filter((item) => item.status[section.key].status !== "none");
+    const completeDays = eligibleDays.filter(
+      (item) => item.status[section.key].status === "complete",
+    ).length;
     const percent = eligibleDays.length ? Math.round((completeDays / eligibleDays.length) * 100) : 0;
     return { ...section, completeDays, totalDays: eligibleDays.length, percent };
   });
 
   const perfectDays = dayStatuses.filter((item) =>
-    SECTIONS.every((section) => item.status[section.key] === true),
+    SECTIONS.every((section) => item.status[section.key].status === "complete"),
   ).length;
 
   return (
@@ -133,15 +202,31 @@ export default function StreaksPage() {
       </section>
 
       <section className="mobile-card compact-controls">
-        <button type="button" onClick={() => setMonth((current) => subMonths(current, 1))}>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedDay(null);
+            setMonth((current) => subMonths(current, 1));
+          }}
+        >
           <ChevronLeft size={18} />
         </button>
-        <button type="button" className="active" onClick={() => setMonth(startOfMonth(new Date()))}>
+        <button
+          type="button"
+          className="active"
+          onClick={() => {
+            setSelectedDay(null);
+            setMonth(startOfMonth(new Date()));
+          }}
+        >
           This month
         </button>
         <button
           type="button"
-          onClick={() => setMonth((current) => addMonths(current, 1))}
+          onClick={() => {
+            setSelectedDay(null);
+            setMonth((current) => addMonths(current, 1));
+          }}
           disabled={isAfter(addMonths(month, 1), startOfMonth(new Date()))}
         >
           <ChevronRight size={18} />
@@ -171,40 +256,80 @@ export default function StreaksPage() {
             })}
           </section>
 
-          <section className="mobile-card">
-            <div className="month-grid-head">
-              {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
-                <span key={`${day}-${index}`}>{day}</span>
-              ))}
-            </div>
-            <div className="month-grid">
-              {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, index) => (
-                <span key={`blank-${index}`} />
-              ))}
-              {dayStatuses.map((item) => (
-                <article key={item.date} className="month-day">
-                  <strong>{format(item.day, "d")}</strong>
-                  <div>
-                    {SECTIONS.map((section) => (
-                      <span
-                        key={section.key}
-                        style={{
-                          background:
-                            item.status[section.key] === true
-                              ? section.color
-                              : item.status[section.key] === false
-                                ? "var(--card3)"
-                                : "transparent",
-                          borderColor:
-                            item.status[section.key] === null ? "var(--card3)" : "transparent",
-                        }}
-                      />
+          <section className="streak-calendars">
+            {SECTIONS.map((section) => {
+              const Icon = section.icon;
+              return (
+                <article key={section.key} className="mobile-card category-calendar">
+                  <div className="section-head">
+                    <div>
+                      <p className="eyebrow">Calendar</p>
+                      <h2 className="section-title">{section.title}</h2>
+                    </div>
+                    <Icon size={19} color={section.color} />
+                  </div>
+                  <div className="month-grid-head">
+                    {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
+                      <span key={`${section.key}-${day}-${index}`}>{day}</span>
                     ))}
                   </div>
+                  <div className="month-grid">
+                    {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, index) => (
+                      <span key={`${section.key}-blank-${index}`} />
+                    ))}
+                    {dayStatuses.map((dayStatus) => {
+                      const item = dayStatus.status[section.key];
+                      const isSelected =
+                        selectedDay?.section.key === section.key &&
+                        selectedDay.item.date === item.date;
+                      return (
+                        <button
+                          key={`${section.key}-${item.date}`}
+                          type="button"
+                          className={`month-day category-day ${item.status} ${isSelected ? "selected" : ""}`}
+                          onClick={() =>
+                            item.status !== "none"
+                              ? setSelectedDay({ section, item })
+                              : setSelectedDay(null)
+                          }
+                          disabled={item.status === "none"}
+                        >
+                          <strong>{format(item.day, "d")}</strong>
+                          <span aria-hidden="true" />
+                        </button>
+                      );
+                    })}
+                  </div>
                 </article>
-              ))}
-            </div>
+              );
+            })}
           </section>
+
+          {selectedDay && (
+            <section className="mobile-card missed-panel">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">{format(selectedDay.item.day, "EEEE, MMMM d")}</p>
+                  <h2 className="section-title">{selectedDay.section.title}</h2>
+                </div>
+                <button type="button" className="small-button" onClick={() => setSelectedDay(null)}>
+                  Close
+                </button>
+              </div>
+              {selectedDay.item.status === "complete" ? (
+                <p className="muted">Everything was completed.</p>
+              ) : (
+                <div className="missed-list">
+                  {selectedDay.item.missed.map((item, index) => (
+                    <article key={`${item.taskId}-${item.exercise || "task"}-${index}`}>
+                      <strong>{item.exercise || item.title}</strong>
+                      {item.exercise && <span>{item.title}</span>}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
         </>
       )}
     </div>

@@ -1011,6 +1011,88 @@ input::placeholder {
   border: 1px solid transparent;
 }
 
+.streak-calendars {
+  display: grid;
+  gap: 14px;
+}
+
+.category-calendar {
+  display: grid;
+  gap: 14px;
+}
+
+.category-calendar .month-grid-head {
+  margin-bottom: -4px;
+}
+
+.category-day {
+  width: 100%;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.category-day span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--card3);
+}
+
+.category-day.complete span {
+  background: #059669;
+  border-color: #059669;
+}
+
+.category-day.partial span {
+  background: #f59e0b;
+  border-color: #f59e0b;
+}
+
+.category-day.missed span {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.category-day.none {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.category-day.selected {
+  border-color: rgba(124, 58, 237, 0.48);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.missed-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.missed-list {
+  display: grid;
+  gap: 8px;
+}
+
+.missed-list article {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  background: var(--card2);
+  border: 1px solid var(--border);
+}
+
+.missed-list strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.missed-list span {
+  color: var(--text3);
+  font-size: 12px;
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -1056,6 +1138,20 @@ input::placeholder {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
+  }
+
+  .streak-calendars {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .category-calendar .month-grid {
+    gap: 5px;
+  }
+
+  .category-calendar .month-day {
+    min-height: 46px;
+    border-radius: 12px;
   }
 }
 

@@ -17,14 +17,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window === "undefined") return "dark";
-    return (localStorage.getItem("theme") || "dark") as "dark" | "light";
-  });
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const savedTheme = (localStorage.getItem("theme") || "dark") as "dark" | "light";
+      setTheme(savedTheme);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
+  useEffect(() => {
     NAV.forEach(({ href }) => router.prefetch(href));
 
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -33,7 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return;
       }
     });
-  }, [router, supabase, theme]);
+  }, [router, supabase]);
 
   function goTo(href: string) {
     if (pathname === href) return;
