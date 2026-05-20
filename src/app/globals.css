@@ -522,7 +522,8 @@ input::placeholder {
 }
 
 .check-row.done span:last-child,
-.planner-row.done strong {
+.planner-row.done strong,
+.todo-row.done .check-row span:last-child {
   text-decoration: line-through;
 }
 
@@ -567,6 +568,88 @@ input::placeholder {
 .workout-exercise-list {
   display: grid;
   gap: 4px;
+}
+
+.todo-calendar {
+  border-color: rgba(37, 99, 235, 0.16);
+}
+
+.todo-card {
+  display: grid;
+  gap: 10px;
+}
+
+.todo-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.todo-input-row input {
+  min-width: 0;
+  min-height: 42px;
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.todo-input-row button,
+.todo-delete {
+  border: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.todo-input-row button {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 14px;
+  color: #fff;
+  background: #2563eb;
+}
+
+.todo-list {
+  display: grid;
+  gap: 4px;
+}
+
+.todo-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.todo-row .check-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-row.done {
+  color: var(--text3);
+}
+
+.todo-row.done .check-box {
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.todo-delete {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 12px;
+  color: var(--text3);
+  background: transparent;
+}
+
+.todo-empty {
+  min-height: 64px;
+  display: grid;
+  place-items: center;
+  color: var(--text3);
+  font-size: 13px;
+  text-align: center;
 }
 
 .check-box {
@@ -1138,6 +1221,10 @@ input::placeholder {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
+  }
+
+  .todo-calendar {
+    grid-column: 3;
   }
 
   .streak-calendars {

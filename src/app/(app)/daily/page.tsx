@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import type { ElementType } from "react";
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
-import { Check, Dumbbell, Loader2, Plus, Sparkles, Utensils } from "lucide-react";
+import { Check, Dumbbell, Loader2, Plus, Sparkles, Trash2, Utensils } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Task, TaskCategory, TaskWithStatus } from "@/lib/types";
 import { getWorkoutExercises, isTaskActiveOnDate } from "@/lib/taskSchedule";
@@ -27,15 +27,64 @@ type CompletionRow = {
   completed_exercises?: number[] | null;
 };
 
+type TodoItem = {
+  id: string;
+  text: string;
+  completed: boolean;
+};
+
+function getSectionProgress(sectionTasks: TaskWithStatus[], sectionKey: TaskCategory) {
+  if (sectionKey !== "workout") {
+    return {
+      done: sectionTasks.filter((task) => task.completed).length,
+      total: sectionTasks.length,
+    };
+  }
+
+  return sectionTasks.reduce(
+    (progress, task) => {
+      const exercises = getWorkoutExercises(task);
+
+      if (exercises.length === 0) {
+        return {
+          done: progress.done + (task.completed ? 1 : 0),
+          total: progress.total + 1,
+        };
+      }
+
+      return {
+        done: progress.done + (task.completedExercises || []).length,
+        total: progress.total + exercises.length,
+      };
+    },
+    { done: 0, total: 0 },
+  );
+}
+
+function readTodos(storageKey: string) {
+  if (!storageKey || typeof window === "undefined") return [];
+
+  try {
+    const storedTodos = window.localStorage.getItem(storageKey);
+    return storedTodos ? (JSON.parse(storedTodos) as TodoItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), []);
   const [userId, setUserId] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tasks, setTasks] = useState<TaskWithStatus[]>([]);
+  const [todoDraft, setTodoDraft] = useState("");
+  const [, refreshTodos] = useReducer((revision: number) => revision + 1, 0);
   const [loading, setLoading] = useState(true);
   const [tickingId, setTickingId] = useState<string | null>(null);
 
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+  const todoStorageKey = userId ? `tracker:todos:${userId}:${selectedDateStr}` : "";
+  const todos = readTodos(todoStorageKey);
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 
@@ -172,10 +221,44 @@ export default function DashboardPage() {
     setTickingId(null);
   }
 
+  function addTodo() {
+    const text = todoDraft.trim();
+    if (!text) return;
+
+    updateTodos((items) => [
+      ...items,
+      {
+        id: crypto.randomUUID(),
+        text,
+        completed: false,
+      },
+    ]);
+    setTodoDraft("");
+  }
+
+  function updateTodos(updater: (items: TodoItem[]) => TodoItem[]) {
+    if (!todoStorageKey) return;
+
+    const nextTodos = updater(readTodos(todoStorageKey));
+    window.localStorage.setItem(todoStorageKey, JSON.stringify(nextTodos));
+    refreshTodos();
+  }
+
+  function toggleTodo(id: string) {
+    updateTodos((items) =>
+      items.map((item) =>
+        item.id === id ? { ...item, completed: !item.completed } : item,
+      ),
+    );
+  }
+
+  function deleteTodo(id: string) {
+    updateTodos((items) => items.filter((item) => item.id !== id));
+  }
+
   const totals = SECTIONS.map((section) => {
     const sectionTasks = tasks.filter((task) => (task.category || "habit") === section.key);
-    const done = sectionTasks.filter((task) => task.completed).length;
-    return { ...section, total: sectionTasks.length, done };
+    return { ...section, ...getSectionProgress(sectionTasks, section.key) };
   });
 
   return (
@@ -235,7 +318,7 @@ export default function DashboardPage() {
             const sectionTasks = tasks.filter(
               (task) => (task.category || "habit") === section.key,
             );
-            const done = sectionTasks.filter((task) => task.completed).length;
+            const { done, total } = getSectionProgress(sectionTasks, section.key);
 
             return (
               <section key={section.key} className="tracker-calendar">
@@ -246,7 +329,7 @@ export default function DashboardPage() {
                     </span>
                     <div>
                       <h2>{section.title}</h2>
-                      <p>{done}/{sectionTasks.length} completed</p>
+                      <p>{done}/{total} completed</p>
                     </div>
                   </div>
                 </header>
@@ -329,6 +412,65 @@ export default function DashboardPage() {
               </section>
             );
           })}
+
+          <section className="tracker-calendar todo-calendar">
+            <header>
+              <div>
+                <span style={{ background: "#2563eb18", color: "#2563eb" }}>
+                  <Check size={17} />
+                </span>
+                <div>
+                  <h2>Todo</h2>
+                  <p>{todos.filter((todo) => todo.completed).length}/{todos.length} completed</p>
+                </div>
+              </div>
+            </header>
+
+            <div className="calendar-card todo-card">
+              <div className="todo-input-row">
+                <input
+                  value={todoDraft}
+                  onChange={(event) => setTodoDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") addTodo();
+                  }}
+                  placeholder="Add today's todo"
+                />
+                <button type="button" aria-label="Add todo" onClick={addTodo}>
+                  <Plus size={18} />
+                </button>
+              </div>
+
+              {todos.length === 0 ? (
+                <p className="todo-empty">No todos for this day.</p>
+              ) : (
+                <div className="todo-list">
+                  {todos.map((todo) => (
+                    <div key={todo.id} className={todo.completed ? "todo-row done" : "todo-row"}>
+                      <button
+                        type="button"
+                        className="check-row"
+                        onClick={() => toggleTodo(todo.id)}
+                      >
+                        <span className="check-box">
+                          {todo.completed && <Check size={16} />}
+                        </span>
+                        <span>{todo.text}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="todo-delete"
+                        aria-label="Delete todo"
+                        onClick={() => deleteTodo(todo.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       )}
     </div>
