@@ -1,5 +1,6 @@
 export type TaskType = "recurring" | "one_off";
 export type TaskCategory = "habit" | "diet" | "workout";
+export type DietDayType = "training" | "rest";
 
 export interface Task {
   id: string;
@@ -9,6 +10,7 @@ export interface Task {
   category: TaskCategory;
   target_date?: string;
   scheduled_weekday?: number | null;
+  diet_day_type?: DietDayType | null;
   exercises?: string[] | null;
   color: string;
   position: number;

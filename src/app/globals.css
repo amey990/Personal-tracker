@@ -170,6 +170,27 @@ input::placeholder {
   border: 1px solid var(--border);
 }
 
+.nav-pill {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 14px;
+  background: var(--card2);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.nav-pill.active {
+  background: rgba(5, 150, 105, 0.14);
+  border-color: rgba(5, 150, 105, 0.28);
+  color: #059669;
+}
+
 .icon-button.danger {
   color: #ef4444;
 }
@@ -511,9 +532,13 @@ input::placeholder {
   padding: 10px;
 }
 
+.calendar-card .check-row {
+  background: var(--card);
+}
+
 .check-row + .check-row,
 .planner-row + .planner-row {
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .check-row.done,
@@ -567,7 +592,12 @@ input::placeholder {
 
 .workout-exercise-list {
   display: grid;
-  gap: 4px;
+  gap: 8px;
+}
+
+.workout-exercise-list .check-row {
+  min-height: 50px;
+  background: var(--card2);
 }
 
 .todo-calendar {
@@ -694,6 +724,10 @@ input::placeholder {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.segmented.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .segmented.weekdays {
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
@@ -804,6 +838,17 @@ input::placeholder {
   flex: 0 0 52px;
   display: grid;
   place-items: center;
+}
+
+.heading-icon {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
 }
 
 .form-error {
@@ -1176,6 +1221,123 @@ input::placeholder {
   font-size: 12px;
 }
 
+.diet-chart-page {
+  gap: 14px;
+}
+
+.macro-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.macro-card,
+.summary-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.macro-card {
+  min-height: 86px;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 14px;
+}
+
+.macro-card span,
+.summary-card span {
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.macro-card strong {
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+.diet-table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.diet-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.diet-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.diet-table th,
+.diet-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.diet-table th {
+  position: sticky;
+  top: 0;
+  background: #0f2744;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.diet-table td:nth-child(n + 4),
+.diet-table th:nth-child(n + 4) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.diet-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--card2) 58%, transparent);
+}
+
+.diet-table .total-row {
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--text);
+  font-weight: 850;
+}
+
+.summary-card-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summary-card {
+  min-height: 132px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 14px;
+}
+
+.summary-card strong {
+  font-size: 17px;
+  color: var(--text);
+}
+
+.summary-card p {
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -1232,6 +1394,12 @@ input::placeholder {
     align-items: start;
   }
 
+  .diet-chart-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
   .category-calendar .month-grid {
     gap: 5px;
   }
@@ -1280,11 +1448,30 @@ input::placeholder {
     font-size: 10px;
   }
 
+  .nav-pill {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .nav-pill span {
+    display: none;
+  }
+
   .summary-grid {
     gap: 8px;
   }
 
   .mini-stat {
     padding: 10px;
+  }
+
+  .macro-grid,
+  .summary-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .macro-card {
+    min-height: 76px;
   }
 }

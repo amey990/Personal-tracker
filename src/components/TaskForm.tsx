@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { TaskCategory } from "@/lib/types";
+import { DietDayType, TaskCategory } from "@/lib/types";
 import { WEEKDAYS } from "@/lib/taskSchedule";
 
 const CATEGORIES: { label: string; value: TaskCategory; color: string }[] = [
@@ -32,6 +32,7 @@ export default function TaskForm({ onSave, onCancel }: Props) {
   const [category, setCategory] = useState<TaskCategory>("habit");
   const [type, setType] = useState<"recurring" | "one_off">("recurring");
   const [targetDate, setTargetDate] = useState("");
+  const [dietDayType, setDietDayType] = useState<DietDayType>("training");
   const [scheduledWeekday, setScheduledWeekday] = useState(1);
   const [exercises, setExercises] = useState([""]);
   const [color, setColor] = useState(CATEGORIES[0].color);
@@ -43,6 +44,10 @@ export default function TaskForm({ onSave, onCancel }: Props) {
     setCategory(next);
     setColor(CATEGORIES.find((item) => item.value === next)?.color || color);
     if (next === "workout") {
+      setType("recurring");
+      setTargetDate("");
+    }
+    if (next === "diet") {
       setType("recurring");
       setTargetDate("");
     }
@@ -88,7 +93,8 @@ export default function TaskForm({ onSave, onCancel }: Props) {
       type: category === "workout" ? "recurring" : type,
       target_date: category !== "workout" && type === "one_off" ? targetDate : null,
       scheduled_weekday: category === "workout" ? scheduledWeekday : null,
-      exercises: category === "workout" ? workoutExercises : null,
+      diet_day_type: category === "diet" && type === "recurring" ? dietDayType : null,
+      exercises: category === "workout" ? workoutExercises : [],
       color,
       position: Date.now(),
       active: true,
@@ -196,6 +202,28 @@ export default function TaskForm({ onSave, onCancel }: Props) {
                 )}
               </div>
             ))}
+          </div>
+        </>
+      ) : category === "diet" ? (
+        <>
+          <div>
+            <p className="field-label">Diet day</p>
+            <div className="segmented two">
+              <button
+                type="button"
+                className={dietDayType === "training" ? "active" : ""}
+                onClick={() => setDietDayType("training")}
+              >
+                Training day
+              </button>
+              <button
+                type="button"
+                className={dietDayType === "rest" ? "active" : ""}
+                onClick={() => setDietDayType("rest")}
+              >
+                Rest day
+              </button>
+            </div>
           </div>
         </>
       ) : (

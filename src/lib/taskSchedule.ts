@@ -24,6 +24,11 @@ export function getWeekdayValue(date: Date) {
   return ((date.getDay() + 6) % 7) + 1;
 }
 
+export function isRestDay(date: Date) {
+  const weekday = getWeekdayValue(date);
+  return weekday === 4 || weekday === 7;
+}
+
 export function getWorkoutWeekday(task: Task) {
   if (task.scheduled_weekday) return task.scheduled_weekday;
 
@@ -40,6 +45,10 @@ export function getTaskScheduleLabel(task: Task) {
     return day ? `${day.label} workout - ${exerciseText}` : "Workout day not set";
   }
 
+  if ((task.category || "habit") === "diet" && task.type === "recurring" && task.diet_day_type) {
+    return task.diet_day_type === "rest" ? "Rest day" : "Training day";
+  }
+
   return task.type === "recurring" ? "Every day" : task.target_date || "One time";
 }
 
@@ -50,6 +59,11 @@ export function isTaskActiveOnDate(task: Task, date: Date, dateKey: string) {
   if ((task.category || "habit") === "workout") {
     const weekday = getWorkoutWeekday(task);
     if (weekday) return weekday === getWeekdayValue(date);
+  }
+
+  if ((task.category || "habit") === "diet" && task.type === "recurring" && task.diet_day_type) {
+    const restDay = isRestDay(date);
+    return task.diet_day_type === "rest" ? restDay : !restDay;
   }
 
   return task.type === "recurring" || task.target_date === dateKey;

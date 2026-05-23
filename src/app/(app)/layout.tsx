@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpen, CalendarCheck, CheckSquare, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
+import {
+  BookOpen,
+  CalendarCheck,
+  CheckSquare,
+  LayoutDashboard,
+  LogOut,
+  Moon,
+  Sun,
+  TableProperties,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV = [
@@ -33,6 +42,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     NAV.forEach(({ href }) => router.prefetch(href));
+    router.prefetch("/diet-chart");
 
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
@@ -68,6 +78,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </button>
 
         <div className="header-actions">
+          <button
+            type="button"
+            className={pathname === "/diet-chart" ? "nav-pill active" : "nav-pill"}
+            onClick={() => goTo("/diet-chart")}
+          >
+            <TableProperties size={17} />
+            <span>Diet Chart</span>
+          </button>
           <button type="button" className="icon-button" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
