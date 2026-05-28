@@ -33,6 +33,35 @@ type TodoItem = {
   completed: boolean;
 };
 
+const MOTIVATION_QUOTES = [
+  "Small steps every day become the shape of your future.",
+  "Discipline is choosing what you want most over what you want now.",
+  "You do not need a perfect day. You need one honest win.",
+  "Show up today. Momentum will meet you there.",
+  "The work you repeat quietly becomes the progress people notice later.",
+  "Consistency turns effort into identity.",
+  "Make the next right choice, then the next one.",
+  "Your future self is built in ordinary minutes.",
+  "Progress is still progress when nobody claps for it.",
+  "Keep promises to yourself. That is where confidence starts.",
+  "A focused hour can change the tone of a whole day.",
+  "Do the simple things well, especially when they feel boring.",
+  "Energy follows action more often than action follows energy.",
+  "You are allowed to move slowly. Just keep moving.",
+  "Win the day in pieces.",
+  "What you track, you can improve.",
+  "One clean rep. One clean meal. One clean decision.",
+  "The streak is not the goal. Becoming reliable is.",
+  "Start before you feel ready; readiness often arrives late.",
+  "Your standards are built by what you do on average days.",
+];
+
+type QuoteHistory = {
+  date?: string;
+  quote?: string;
+  used?: string[];
+};
+
 function getSectionProgress(sectionTasks: TaskWithStatus[], sectionKey: TaskCategory) {
   if (sectionKey !== "workout") {
     return {
@@ -72,6 +101,38 @@ function readTodos(storageKey: string) {
   }
 }
 
+function getDailyQuote(storageKey: string, dateKey: string) {
+  if (!storageKey || typeof window === "undefined") return "";
+
+  try {
+    const stored = window.localStorage.getItem(storageKey);
+    const history = stored ? (JSON.parse(stored) as QuoteHistory) : {};
+
+    if (history.date === dateKey && history.quote) {
+      return history.quote;
+    }
+
+    const usedQuotes = Array.isArray(history.used) ? history.used : [];
+    const availableQuotes = MOTIVATION_QUOTES.filter((quote) => !usedQuotes.includes(quote));
+    const quotePool = availableQuotes.length > 0 ? availableQuotes : MOTIVATION_QUOTES;
+    const nextQuote = quotePool[Math.floor(Math.random() * quotePool.length)];
+    const nextUsed = availableQuotes.length > 0 ? [...usedQuotes, nextQuote] : [nextQuote];
+
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        date: dateKey,
+        quote: nextQuote,
+        used: nextUsed,
+      }),
+    );
+
+    return nextQuote;
+  } catch {
+    return MOTIVATION_QUOTES[0];
+  }
+}
+
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), []);
   const [userId, setUserId] = useState("");
@@ -84,7 +145,9 @@ export default function DashboardPage() {
 
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
   const todoStorageKey = userId ? `tracker:todos:${userId}:${selectedDateStr}` : "";
+  const quoteStorageKey = userId ? `tracker:quotes:${userId}` : "";
   const todos = readTodos(todoStorageKey);
+  const dailyQuote = getDailyQuote(quoteStorageKey, selectedDateStr);
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 
@@ -263,6 +326,12 @@ export default function DashboardPage() {
 
   return (
     <div className="mobile-page">
+      {dailyQuote && (
+        <p className="daily-quote" aria-label="Daily motivation">
+          &quot;{dailyQuote}&quot;
+        </p>
+      )}
+
       <section className="dashboard-hero">
         <div className="hero-copy">
           <h1>{format(selectedDate, "EEEE d MMMM")}</h1>

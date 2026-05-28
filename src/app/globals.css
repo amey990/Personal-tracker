@@ -299,6 +299,14 @@ input::placeholder {
   gap: 18px;
 }
 
+.daily-quote {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.45;
+  padding: 0 2px;
+}
+
 .hero-copy {
   min-width: 0;
   display: flex;
