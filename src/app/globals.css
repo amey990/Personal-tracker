@@ -133,10 +133,27 @@ input::placeholder {
   color: var(--text);
 }
 
-.brand-chip span,
+.brand-logo-frame,
 .avatar-button {
   width: 36px;
   height: 36px;
+}
+
+.brand-logo-frame {
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.brand-logo {
+  width: 30px !important;
+  height: 30px !important;
+  max-width: 30px !important;
+  object-fit: contain;
+}
+
+.avatar-button {
   border-radius: 12px;
   display: grid;
   place-items: center;

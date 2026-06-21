@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -13,6 +14,9 @@ import {
   TableProperties,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import americaLogo from "../../../assets/america.png";
+import batmanLogo from "../../../assets/mask.png";
+import supermanLogo from "../../../assets/man.png";
 
 const NAV = [
   { href: "/daily", label: "Dashboard", icon: LayoutDashboard },
@@ -27,6 +31,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const brandLogo = pathname === "/diet-chart"
+    ? { src: supermanLogo, alt: "Superman" }
+    : pathname === "/streaks"
+      ? { src: americaLogo, alt: "Captain America" }
+      : { src: batmanLogo, alt: "Batman" };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -73,7 +82,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <header className="app-header">
         <button className="brand-chip" type="button" onClick={() => goTo("/daily")}>
-          <span>T</span>
+          <span className="brand-logo-frame">
+            <Image
+              className="brand-logo"
+              src={brandLogo.src}
+              alt={brandLogo.alt}
+              width={30}
+              height={30}
+              priority
+            />
+          </span>
           <strong>Tracker</strong>
         </button>
 
