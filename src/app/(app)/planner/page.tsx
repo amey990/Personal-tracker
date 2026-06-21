@@ -25,7 +25,7 @@ export default function PlannerPage() {
   const [completedSections, setCompletedSections] = useState("");
 
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 
   useEffect(() => {
@@ -225,7 +225,12 @@ export default function PlannerPage() {
               const course = item.course as Course | undefined;
               return (
                 <article key={item.id} className={item.completed ? "planner-row done" : "planner-row"}>
-                  <button type="button" className="check-box" onClick={() => toggleItem(item)}>
+                  <button
+                    type="button"
+                    className="check-box"
+                    aria-label={item.completed ? `Mark ${item.title} incomplete` : `Mark ${item.title} complete`}
+                    onClick={() => toggleItem(item)}
+                  >
                     {item.completed && <Check size={16} />}
                   </button>
                   <div>

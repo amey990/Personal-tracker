@@ -178,15 +178,6 @@ export default function StreaksPage() {
     return { day, date: format(day, "yyyy-MM-dd"), status };
   });
 
-  const summary = SECTIONS.map((section) => {
-    const eligibleDays = dayStatuses.filter((item) => item.status[section.key].status !== "none");
-    const completeDays = eligibleDays.filter(
-      (item) => item.status[section.key].status === "complete",
-    ).length;
-    const percent = eligibleDays.length ? Math.round((completeDays / eligibleDays.length) * 100) : 0;
-    return { ...section, completeDays, totalDays: eligibleDays.length, percent };
-  });
-
   const perfectDays = dayStatuses.filter((item) =>
     SECTIONS.every((section) => item.status[section.key].status === "complete"),
   ).length;
@@ -240,22 +231,6 @@ export default function StreaksPage() {
         </div>
       ) : (
         <>
-          <section className="streak-summary">
-            {summary.map((item) => {
-              const Icon = item.icon;
-              return (
-                <article key={item.key} className="streak-stat">
-                  <Icon size={18} color={item.color} />
-                  <strong>{item.completeDays}/{item.totalDays}</strong>
-                  <span>{item.title}</span>
-                  <div>
-                    <span style={{ width: `${item.percent}%`, background: item.color }} />
-                  </div>
-                </article>
-              );
-            })}
-          </section>
-
           <section className="streak-calendars">
             {SECTIONS.map((section) => {
               const Icon = section.icon;
