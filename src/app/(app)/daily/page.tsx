@@ -7,6 +7,7 @@ import { Check, Dumbbell, Loader2, Plus, Sparkles, Trash2, Utensils } from "luci
 import { createClient } from "@/lib/supabase/client";
 import { Task, TaskCategory, TaskWithStatus } from "@/lib/types";
 import { getWorkoutExercises, isTaskActiveOnDate } from "@/lib/taskSchedule";
+import WeightTracker from "@/components/WeightTracker";
 
 const SECTIONS: {
   key: TaskCategory;
@@ -374,6 +375,8 @@ export default function DashboardPage() {
           );
         })}
       </section>
+
+      <WeightTracker />
 
       {loading ? (
         <div className="center-state">
