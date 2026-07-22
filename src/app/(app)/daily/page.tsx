@@ -437,6 +437,110 @@ export default function DashboardPage() {
     setTodoBusyId(null);
   }
 
+  function renderTrackerSection(sectionKey: DashboardSectionKey) {
+    const section = TRACKER_SECTIONS.find((item) => item.key === sectionKey);
+    if (!section) return null;
+
+    const Icon = section.icon;
+    const sectionTasks = getTasksForSection(tasks, section.key);
+    const { done, total } = getSectionProgress(sectionTasks, section.key);
+
+    return (
+      <section
+        key={section.key}
+        className={`tracker-calendar tracker-section-${section.key}`}
+      >
+        <header>
+          <div>
+            <span style={{ background: `${section.color}18`, color: section.color }}>
+              <Icon size={17} />
+            </span>
+            <div>
+              <h2>{section.title}</h2>
+              <p>{done}/{total} completed</p>
+            </div>
+          </div>
+        </header>
+
+        <div className="calendar-card">
+          {sectionTasks.length === 0 ? (
+            <a className="empty-link" href="/settings">
+              <Plus size={18} />
+              Add {section.title.toLowerCase()} in Task Manager
+            </a>
+          ) : (
+            sectionTasks.map((task) => {
+              const exercises = getWorkoutExercises(task);
+              const isWorkout = (task.category || "habit") === "workout";
+
+              if (isWorkout && exercises.length > 0) {
+                return (
+                  <article
+                    key={task.id}
+                    className={task.completed ? "workout-session done" : "workout-session"}
+                  >
+                    <div className="workout-session-head">
+                      <strong>{task.name}</strong>
+                      <span>
+                        {(task.completedExercises || []).length}/{exercises.length}
+                      </span>
+                    </div>
+                    <div className="workout-exercise-list">
+                      {exercises.map((exercise, index) => {
+                        const exerciseDone = (task.completedExercises || []).includes(index);
+                        return (
+                          <button
+                            key={`${task.id}-${index}`}
+                            type="button"
+                            className={exerciseDone ? "check-row done" : "check-row"}
+                            onClick={() => toggleExercise(task, index)}
+                            disabled={tickingId !== null}
+                          >
+                            <span
+                              className="check-box"
+                              style={{
+                                borderColor: exerciseDone ? task.color : "var(--card3)",
+                                background: exerciseDone ? task.color : "transparent",
+                              }}
+                            >
+                              {exerciseDone && <Check size={16} />}
+                            </span>
+                            <span>{exercise}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </article>
+                );
+              }
+
+              return (
+                <button
+                  key={task.id}
+                  type="button"
+                  className={task.completed ? "check-row done" : "check-row"}
+                  onClick={() => toggleTask(task)}
+                  disabled={tickingId !== null}
+                >
+                  <span
+                    className="check-box"
+                    style={{
+                      borderColor: task.completed ? task.color : "var(--card3)",
+                      background: task.completed ? task.color : "transparent",
+                    }}
+                  >
+                    {task.completed && <Check size={16} />}
+                  </span>
+                  <span>{task.name}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </section>
+    );
+  }
+
   const totals = SUMMARY_SECTIONS.map((section) => {
     const sectionTasks = tasks.filter(
       (task) => (task.category || "habit") === section.key,
@@ -445,7 +549,7 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="mobile-page">
+    <div className="mobile-page dashboard-page">
       {dailyQuote && (
         <p className="daily-quote" aria-label="Daily motivation">
           &quot;{dailyQuote}&quot;
@@ -504,105 +608,10 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="calendar-stack">
-          {TRACKER_SECTIONS.map((section) => {
-            const Icon = section.icon;
-            const sectionTasks = getTasksForSection(tasks, section.key);
-            const { done, total } = getSectionProgress(sectionTasks, section.key);
+          <div className="dashboard-column dashboard-column-primary">
+            {renderTrackerSection("habit")}
 
-            return (
-              <section key={section.key} className="tracker-calendar">
-                <header>
-                  <div>
-                    <span style={{ background: `${section.color}18`, color: section.color }}>
-                      <Icon size={17} />
-                    </span>
-                    <div>
-                      <h2>{section.title}</h2>
-                      <p>{done}/{total} completed</p>
-                    </div>
-                  </div>
-                </header>
-
-                <div className="calendar-card">
-                  {sectionTasks.length === 0 ? (
-                    <a className="empty-link" href="/settings">
-                      <Plus size={18} />
-                      Add {section.title.toLowerCase()} in Task Manager
-                    </a>
-                  ) : (
-                    sectionTasks.map((task) => {
-                      const exercises = getWorkoutExercises(task);
-                      const isWorkout = (task.category || "habit") === "workout";
-
-                      if (isWorkout && exercises.length > 0) {
-                        return (
-                          <article
-                            key={task.id}
-                            className={task.completed ? "workout-session done" : "workout-session"}
-                          >
-                            <div className="workout-session-head">
-                              <strong>{task.name}</strong>
-                              <span>
-                                {(task.completedExercises || []).length}/{exercises.length}
-                              </span>
-                            </div>
-                            <div className="workout-exercise-list">
-                              {exercises.map((exercise, index) => {
-                                const exerciseDone = (task.completedExercises || []).includes(index);
-                                return (
-                                  <button
-                                    key={`${task.id}-${index}`}
-                                    type="button"
-                                    className={exerciseDone ? "check-row done" : "check-row"}
-                                    onClick={() => toggleExercise(task, index)}
-                                    disabled={tickingId !== null}
-                                  >
-                                    <span
-                                      className="check-box"
-                                      style={{
-                                        borderColor: exerciseDone ? task.color : "var(--card3)",
-                                        background: exerciseDone ? task.color : "transparent",
-                                      }}
-                                    >
-                                      {exerciseDone && <Check size={16} />}
-                                    </span>
-                                    <span>{exercise}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </article>
-                        );
-                      }
-
-                      return (
-                        <button
-                          key={task.id}
-                          type="button"
-                          className={task.completed ? "check-row done" : "check-row"}
-                          onClick={() => toggleTask(task)}
-                          disabled={tickingId !== null}
-                        >
-                          <span
-                            className="check-box"
-                            style={{
-                              borderColor: task.completed ? task.color : "var(--card3)",
-                              background: task.completed ? task.color : "transparent",
-                            }}
-                          >
-                            {task.completed && <Check size={16} />}
-                          </span>
-                          <span>{task.name}</span>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
-            );
-          })}
-
-          <section className="tracker-calendar todo-calendar">
+            <section className="tracker-calendar todo-calendar">
             <header>
               <div>
                 <span style={{ background: "#2563eb18", color: "#2563eb" }}>
@@ -680,7 +689,17 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </section>
+            </section>
+          </div>
+
+          <div className="dashboard-column dashboard-column-diet">
+            {renderTrackerSection("diet")}
+          </div>
+
+          <div className="dashboard-column dashboard-column-activity">
+            {renderTrackerSection("fatburn")}
+            {renderTrackerSection("workout")}
+          </div>
         </div>
       )}
     </div>

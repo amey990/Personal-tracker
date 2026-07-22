@@ -285,6 +285,30 @@ input::placeholder {
   gap: 12px;
 }
 
+.dashboard-column {
+  display: contents;
+}
+
+.tracker-section-habit {
+  order: 1;
+}
+
+.tracker-section-diet {
+  order: 2;
+}
+
+.tracker-section-fatburn {
+  order: 3;
+}
+
+.tracker-section-workout {
+  order: 4;
+}
+
+.todo-calendar {
+  order: 5;
+}
+
 .task-list,
 .course-list {
   gap: 10px;
@@ -1595,8 +1619,28 @@ input::placeholder {
 
   .calendar-stack {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 16px;
     align-items: start;
+  }
+
+  .dashboard-page {
+    width: min(1200px, calc(100vw - 48px));
+    max-width: none;
+    position: relative;
+    left: calc(50% - 16px);
+    transform: translateX(-50%);
+  }
+
+  .dashboard-column {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dashboard-column .tracker-calendar {
+    width: 100%;
   }
 
   .weight-form {
@@ -1607,10 +1651,6 @@ input::placeholder {
   .weight-save-button {
     min-width: 150px;
     padding: 0 22px;
-  }
-
-  .todo-calendar {
-    grid-column: 3;
   }
 
   .streak-calendars {
