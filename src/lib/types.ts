@@ -10,6 +10,7 @@ export interface Task {
   category: TaskCategory;
   target_date?: string;
   scheduled_weekday?: number | null;
+  is_daily?: boolean;
   diet_day_type?: DietDayType | null;
   exercises?: string[] | null;
   color: string;

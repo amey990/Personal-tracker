@@ -457,8 +457,12 @@ input::placeholder {
 }
 
 .weight-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: grid;
   gap: 18px;
+  overflow: hidden;
 }
 
 .weight-card-header {
@@ -513,8 +517,25 @@ input::placeholder {
 }
 
 .weight-form {
+  width: 100%;
+  min-width: 0;
   display: grid;
   gap: 12px;
+}
+
+.weight-form > div,
+.weight-input-shell,
+.weight-form input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.weight-form input[type="date"] {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  font-size: 16px;
 }
 
 .weight-input-shell {
@@ -856,6 +877,18 @@ input::placeholder {
   background: #2563eb;
 }
 
+.todo-input-row button:disabled,
+.todo-delete:disabled,
+.todo-row .check-row:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.todo-error {
+  padding: 0 2px;
+  line-height: 1.4;
+}
+
 .todo-list {
   display: grid;
   gap: 4px;
@@ -947,6 +980,10 @@ input::placeholder {
 
 .segmented.weekdays {
   grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.segmented.workout-days {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .segmented button {

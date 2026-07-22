@@ -30,6 +30,7 @@ export function isRestDay(date: Date) {
 }
 
 export function getWorkoutWeekday(task: Task) {
+  if (task.is_daily) return null;
   if (task.scheduled_weekday) return task.scheduled_weekday;
 
   const firstWord = task.name.trim().split(/\s+/)[0]?.toLowerCase();
@@ -38,10 +39,13 @@ export function getWorkoutWeekday(task: Task) {
 
 export function getTaskScheduleLabel(task: Task) {
   if ((task.category || "habit") === "workout") {
-    const weekday = getWorkoutWeekday(task);
-    const day = WEEKDAYS.find((item) => item.value === weekday);
     const exerciseCount = getWorkoutExercises(task).length;
     const exerciseText = exerciseCount === 1 ? "1 exercise" : `${exerciseCount} exercises`;
+
+    if (task.is_daily) return `Every day - ${exerciseText}`;
+
+    const weekday = getWorkoutWeekday(task);
+    const day = WEEKDAYS.find((item) => item.value === weekday);
     return day ? `${day.label} workout - ${exerciseText}` : "Workout day not set";
   }
 
@@ -57,6 +61,8 @@ export function isTaskActiveOnDate(task: Task, date: Date, dateKey: string) {
   if (createdAt && dateKey < formatDateKey(createdAt)) return false;
 
   if ((task.category || "habit") === "workout") {
+    if (task.is_daily) return true;
+
     const weekday = getWorkoutWeekday(task);
     if (weekday) return weekday === getWeekdayValue(date);
   }
