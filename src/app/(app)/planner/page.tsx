@@ -5,6 +5,7 @@ import { addDays, format, isSameDay, isToday, startOfWeek } from "date-fns";
 import { BookOpen, Check, ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Course, DailyPlanItem } from "@/lib/types";
+import ExamPlanner from "@/components/ExamPlanner";
 
 const COURSE_COLORS = ["#7c3aed", "#059669", "#0ea5e9", "#d97706", "#dc2626", "#ec4899"];
 
@@ -23,6 +24,7 @@ export default function PlannerPage() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [completedSections, setCompletedSections] = useState("");
+  const [plannerView, setPlannerView] = useState<"learning" | "exams">("learning");
 
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -143,6 +145,29 @@ export default function PlannerPage() {
 
   return (
     <div className="mobile-page">
+      <div className="planner-view-toggle" aria-label="Planner view">
+        <button
+          type="button"
+          className={plannerView === "learning" ? "active" : ""}
+          aria-pressed={plannerView === "learning"}
+          onClick={() => setPlannerView("learning")}
+        >
+          Learning
+        </button>
+        <button
+          type="button"
+          className={plannerView === "exams" ? "active" : ""}
+          aria-pressed={plannerView === "exams"}
+          onClick={() => setPlannerView("exams")}
+        >
+          Exams
+        </button>
+      </div>
+
+      {plannerView === "exams" ? (
+        <ExamPlanner userId={userId} />
+      ) : (
+        <>
       <section className="page-heading">
         <div>
           <p className="eyebrow">{format(selectedDate, "EEEE, MMMM d")}</p>
@@ -344,6 +369,8 @@ export default function PlannerPage() {
           )}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }

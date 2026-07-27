@@ -34,6 +34,7 @@ export default function TaskForm({ onSave, onCancel }: Props) {
   const [targetDate, setTargetDate] = useState("");
   const [dietDayType, setDietDayType] = useState<DietDayType>("training");
   const [scheduledWeekday, setScheduledWeekday] = useState(1);
+  const [workoutEveryDay, setWorkoutEveryDay] = useState(false);
   const [exercises, setExercises] = useState([""]);
   const [color, setColor] = useState(CATEGORIES[0].color);
   const [saving, setSaving] = useState(false);
@@ -92,7 +93,8 @@ export default function TaskForm({ onSave, onCancel }: Props) {
       category,
       type: category === "workout" ? "recurring" : type,
       target_date: category !== "workout" && type === "one_off" ? targetDate : null,
-      scheduled_weekday: category === "workout" ? scheduledWeekday : null,
+      scheduled_weekday: category === "workout" && !workoutEveryDay ? scheduledWeekday : null,
+      is_daily: category === "workout" ? workoutEveryDay : false,
       diet_day_type: category === "diet" && type === "recurring" ? dietDayType : null,
       exercises: category === "workout" ? workoutExercises : [],
       color,
@@ -150,13 +152,23 @@ export default function TaskForm({ onSave, onCancel }: Props) {
         <>
           <div>
             <p className="field-label">Workout day</p>
-            <div className="segmented weekdays">
+            <div className="segmented workout-days">
+              <button
+                type="button"
+                className={workoutEveryDay ? "active" : ""}
+                onClick={() => setWorkoutEveryDay(true)}
+              >
+                Every day
+              </button>
               {WEEKDAYS.map((day) => (
                 <button
                   key={day.value}
                   type="button"
-                  className={scheduledWeekday === day.value ? "active" : ""}
-                  onClick={() => setScheduledWeekday(day.value)}
+                  className={!workoutEveryDay && scheduledWeekday === day.value ? "active" : ""}
+                  onClick={() => {
+                    setWorkoutEveryDay(false);
+                    setScheduledWeekday(day.value);
+                  }}
                 >
                   {day.label}
                 </button>

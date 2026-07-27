@@ -10,6 +10,7 @@ export interface Task {
   category: TaskCategory;
   target_date?: string;
   scheduled_weekday?: number | null;
+  is_daily?: boolean;
   diet_day_type?: DietDayType | null;
   exercises?: string[] | null;
   color: string;
@@ -97,4 +98,16 @@ export interface DailyPlanItem {
   created_at: string;
   // Joined field (from query)
   course?: Course;
+}
+
+export type ExamStatus = "pending" | "passed";
+
+export interface Exam {
+  id: string;
+  user_id: string;
+  name: string;
+  scheduled_date: string;
+  status: ExamStatus;
+  created_at: string;
+  updated_at: string;
 }
