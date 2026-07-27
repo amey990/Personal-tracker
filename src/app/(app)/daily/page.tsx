@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ElementType } from "react";
-import { addDays, format, isSameDay, startOfWeek } from "date-fns";
-import { Check, Dumbbell, Flame, Loader2, Plus, Sparkles, Trash2, Utensils } from "lucide-react";
+import { addDays, differenceInCalendarDays, format, isSameDay, parseISO, startOfWeek } from "date-fns";
+import { CalendarDays, Check, Dumbbell, Flame, Loader2, Plus, Sparkles, Trash2, Utensils } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Task, TaskCategory, TaskWithStatus } from "@/lib/types";
+import { Exam, Task, TaskCategory, TaskWithStatus } from "@/lib/types";
 import { getWorkoutExercises, isTaskActiveOnDate } from "@/lib/taskSchedule";
 import WeightTracker from "@/components/WeightTracker";
 
@@ -167,6 +167,59 @@ function getDailyQuote(storageKey: string, dateKey: string) {
   }
 }
 
+function UpcomingExamsStrip({
+  exams,
+  fromDate,
+}: {
+  exams: Exam[];
+  fromDate: Date;
+}) {
+  return (
+    <section className="upcoming-exams" aria-labelledby="upcoming-exams-title">
+      <header>
+        <div>
+          <span className="upcoming-exams-icon">
+            <CalendarDays size={18} />
+          </span>
+          <div>
+            <p className="eyebrow">On the horizon</p>
+            <h2 id="upcoming-exams-title">Upcoming exams</h2>
+          </div>
+        </div>
+        <a href="/planner">View planner</a>
+      </header>
+
+      {exams.length === 0 ? (
+        <a className="upcoming-exams-empty" href="/planner">
+          No pending exams scheduled. Add one in Planner.
+        </a>
+      ) : (
+        <div className="upcoming-exams-track">
+          {exams.map((exam) => {
+            const examDate = parseISO(exam.scheduled_date);
+            const daysAway = differenceInCalendarDays(examDate, fromDate);
+            const countdown =
+              daysAway === 0 ? "Today" : daysAway === 1 ? "Tomorrow" : `${daysAway} days`;
+
+            return (
+              <article key={exam.id} className="upcoming-exam-chip">
+                <span className="exam-date-tile pending">
+                  <strong>{format(examDate, "dd")}</strong>
+                  <small>{format(examDate, "MMM")}</small>
+                </span>
+                <div>
+                  <strong>{exam.name}</strong>
+                  <span>{countdown} · {format(examDate, "EEE, d MMM")}</span>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), []);
   const [userId, setUserId] = useState("");
@@ -176,6 +229,7 @@ export default function DashboardPage() {
   const [todoDraft, setTodoDraft] = useState("");
   const [todoBusyId, setTodoBusyId] = useState<string | null>(null);
   const [todoError, setTodoError] = useState("");
+  const [upcomingExams, setUpcomingExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [tickingId, setTickingId] = useState<string | null>(null);
 
@@ -198,7 +252,7 @@ export default function DashboardPage() {
     async function loadDashboard() {
       setLoading(true);
       setTodoError("");
-      const [taskResult, completionResult, todoResult] = await Promise.all([
+      const [taskResult, completionResult, todoResult, examResult] = await Promise.all([
         supabase
           .from("tasks")
           .select("*")
@@ -216,10 +270,19 @@ export default function DashboardPage() {
           .eq("user_id", userId)
           .eq("date", selectedDateStr)
           .order("created_at"),
+        supabase
+          .from("exams")
+          .select("id, user_id, name, scheduled_date, status, created_at, updated_at")
+          .eq("user_id", userId)
+          .eq("status", "pending")
+          .gte("scheduled_date", selectedDateStr)
+          .order("scheduled_date", { ascending: true })
+          .limit(5),
       ]);
 
       const taskRows = taskResult.data;
       const completionRows = completionResult.data;
+      setUpcomingExams(examResult.error ? [] : ((examResult.data || []) as Exam[]));
 
       const activeForDay = ((taskRows || []) as Task[]).filter((task) =>
         isTaskActiveOnDate(task, selectedDate, selectedDateStr),
@@ -607,6 +670,8 @@ export default function DashboardPage() {
           <p>Loading your day...</p>
         </div>
       ) : (
+        <>
+        <UpcomingExamsStrip exams={upcomingExams} fromDate={selectedDate} />
         <div className="calendar-stack">
           <div className="dashboard-column dashboard-column-primary">
             {renderTrackerSection("habit")}
@@ -701,6 +766,7 @@ export default function DashboardPage() {
             {renderTrackerSection("workout")}
           </div>
         </div>
+        </>
       )}
     </div>
   );

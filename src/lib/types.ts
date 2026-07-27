@@ -99,3 +99,15 @@ export interface DailyPlanItem {
   // Joined field (from query)
   course?: Course;
 }
+
+export type ExamStatus = "pending" | "passed";
+
+export interface Exam {
+  id: string;
+  user_id: string;
+  name: string;
+  scheduled_date: string;
+  status: ExamStatus;
+  created_at: string;
+  updated_at: string;
+}
