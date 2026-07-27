@@ -64,6 +64,8 @@ input,
 select,
 textarea {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--card2);
@@ -71,6 +73,14 @@ textarea {
   min-height: 48px;
   padding: 12px 14px;
   outline: none;
+}
+
+/* Safari gives date controls an intrinsic width that can overflow narrow cards. */
+input[type="date"] {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 input:focus,
@@ -734,6 +744,10 @@ input::placeholder {
 .mobile-card {
   border-radius: 22px;
   padding: 16px;
+}
+
+.mobile-card > * {
+  min-width: 0;
 }
 
 .segmented {
