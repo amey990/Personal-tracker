@@ -16,6 +16,14 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Default workout split
+
+After creating the weekly workout split in the app, run
+[`default_workout_split_setup.sql`](./default_workout_split_setup.sql) once in
+the Supabase SQL editor. It snapshots the existing owner's active weekly split
+and gives every other user an independent copy on their first authenticated app
+load. The seed is idempotent, so later logins do not create duplicates.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

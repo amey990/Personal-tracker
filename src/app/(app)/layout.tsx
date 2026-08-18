@@ -31,6 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const [isPending, startTransition] = useTransition();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [sessionReady, setSessionReady] = useState(false);
   const brandLogo = pathname === "/diet-chart"
     ? { src: supermanLogo, alt: "Superman" }
     : pathname === "/streaks"
@@ -53,11 +54,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     NAV.forEach(({ href }) => router.prefetch(href));
     router.prefetch("/diet-chart");
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) {
         router.push("/login");
         return;
       }
+
+      const { error } = await supabase.rpc("ensure_default_workout_split");
+      if (error) {
+        console.error("Could not create the default workout split:", error.message);
+      }
+
+      setSessionReady(true);
     });
   }, [router, supabase]);
 
@@ -115,7 +123,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <main className="app-content">
         {isPending && <div className="route-loading" />}
-        {children}
+        {sessionReady ? children : (
+          <div className="center-state" role="status" aria-live="polite">
+            <p>Preparing your tracker...</p>
+          </div>
+        )}
       </main>
 
       <nav className="bottom-nav" aria-label="Primary navigation">
