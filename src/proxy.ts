@@ -2,6 +2,26 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const AUTH_TIMEOUT_MS = 4_000;
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+  const abort = () => controller.abort();
+
+  init?.signal?.addEventListener("abort", abort, { once: true });
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+    init?.signal?.removeEventListener("abort", abort);
+  }
+}
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -23,12 +43,13 @@ export async function proxy(request: NextRequest) {
           );
         },
       },
+      global: {
+        // An upstream auth outage must not run until Netlify kills the edge
+        // function and replaces the application with its crash page.
+        fetch: fetchWithTimeout,
+      },
     },
   );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
 
@@ -43,13 +64,18 @@ export async function proxy(request: NextRequest) {
 
   if (isPublic) return supabaseResponse;
 
-  if (!user && !isAuthPage) {
+  // getClaims verifies modern Supabase JWTs locally after the signing key has
+  // been cached. getUser always makes a network round trip on every request.
+  const { data, error } = await supabase.auth.getClaims();
+  const isAuthenticated = !error && Boolean(data?.claims?.sub);
+
+  if (!isAuthenticated && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
+  if (isAuthenticated && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/daily";
     return NextResponse.redirect(url);
