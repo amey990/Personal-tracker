@@ -168,7 +168,7 @@ export default function WeightTracker() {
           </div>
         </div>
 
-        <div>
+        <div className="weight-date-field">
           <label className="field-label" htmlFor="weight-date">
             Date
           </label>

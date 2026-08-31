@@ -23,6 +23,8 @@ export default function PlannerPage() {
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
+  const [courseError, setCourseError] = useState("");
   const [completedSections, setCompletedSections] = useState("");
   const [plannerView, setPlannerView] = useState<"learning" | "exams">("learning");
 
@@ -139,6 +141,30 @@ export default function PlannerPage() {
     );
     setEditingCourseId(null);
     setCompletedSections("");
+  }
+
+  async function deleteCourse(course: Course) {
+    if (deletingCourseId || !window.confirm(`Delete "${course.name}" and its study tasks?`)) return;
+
+    setDeletingCourseId(course.id);
+    setCourseError("");
+    const { error } = await supabase
+      .from("courses")
+      .delete()
+      .eq("id", course.id)
+      .eq("user_id", userId);
+
+    if (error) {
+      setCourseError(error.message);
+    } else {
+      setCourses((current) => current.filter((item) => item.id !== course.id));
+      setItems((current) => current.filter((item) => item.course_id !== course.id));
+      if (editingCourseId === course.id) {
+        setEditingCourseId(null);
+        setCompletedSections("");
+      }
+    }
+    setDeletingCourseId(null);
   }
 
   const doneItems = items.filter((item) => item.completed).length;
@@ -302,6 +328,8 @@ export default function PlannerPage() {
           </div>
         )}
 
+        {courseError && <p className="form-error">{courseError}</p>}
+
         <div className="course-list">
           {courses.length === 0 ? (
             <p className="muted">No courses yet.</p>
@@ -351,18 +379,35 @@ export default function PlannerPage() {
                       </div>
                     )}
                   </div>
-                  {editingCourseId !== course.id && (
+                  <div className="course-row-actions">
+                    {editingCourseId !== course.id && (
+                      <button
+                        type="button"
+                        className="small-button course-update"
+                        onClick={() => {
+                          setEditingCourseId(course.id);
+                          setCompletedSections(String(course.completed_sections));
+                        }}
+                        disabled={deletingCourseId !== null}
+                      >
+                        Update
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="small-button course-update"
-                      onClick={() => {
-                        setEditingCourseId(course.id);
-                        setCompletedSections(String(course.completed_sections));
-                      }}
+                      className="icon-button danger course-delete-button"
+                      aria-label={`Delete ${course.name}`}
+                      title="Delete course"
+                      onClick={() => void deleteCourse(course)}
+                      disabled={deletingCourseId !== null}
                     >
-                      Update
+                      {deletingCourseId === course.id ? (
+                        <Loader2 className="spin" size={16} />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
                     </button>
-                  )}
+                  </div>
                 </div>
               );
             })

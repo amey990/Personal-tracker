@@ -568,8 +568,15 @@ input::placeholder {
 .weight-form input[type="date"] {
   display: block;
   inline-size: 100%;
+  width: -webkit-fill-available;
   min-inline-size: 0;
+  max-inline-size: 100%;
   font-size: 16px;
+}
+
+.weight-date-field {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .weight-input-shell {
@@ -1294,6 +1301,25 @@ input::placeholder {
   font-size: 12px;
 }
 
+.course-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.course-delete-button,
+.exam-delete-button {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+}
+
+.course-delete-button:disabled,
+.exam-delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .course-editor {
   display: grid;
   grid-template-columns: 1fr;
@@ -1544,8 +1570,14 @@ input::placeholder {
   font-size: 12px;
 }
 
-.exam-update-button {
+.exam-row-actions {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+}
+
+.exam-update-button {
   min-height: 42px;
   display: flex;
   align-items: center;
@@ -1983,8 +2015,12 @@ input::placeholder {
     align-items: end;
   }
 
-  .exam-update-button {
+  .exam-row-actions {
     grid-column: auto;
+    grid-template-columns: minmax(130px, 1fr) 42px;
+  }
+
+  .exam-update-button {
     min-width: 130px;
   }
 

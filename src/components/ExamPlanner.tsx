@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { CalendarDays, Check, Loader2 } from "lucide-react";
+import { CalendarDays, Check, Loader2, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Exam, ExamStatus } from "@/lib/types";
 
@@ -121,6 +121,25 @@ export default function ExamPlanner({ userId }: ExamPlannerProps) {
       setExams((current) =>
         [...current].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date)),
       );
+    }
+    setBusyId(null);
+  }
+
+  async function deleteExam(exam: Exam) {
+    if (busyId || !window.confirm(`Delete "${exam.name}"?`)) return;
+
+    setBusyId(exam.id);
+    setError("");
+    const { error: deleteError } = await supabase
+      .from("exams")
+      .delete()
+      .eq("id", exam.id)
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      setError(deleteError.message);
+    } else {
+      setExams((current) => current.filter((item) => item.id !== exam.id));
     }
     setBusyId(null);
   }
@@ -261,14 +280,26 @@ export default function ExamPlanner({ userId }: ExamPlannerProps) {
                       <option value="passed">Passed</option>
                     </select>
                   </label>
-                  <button
-                    type="button"
-                    className="small-button exam-update-button"
-                    onClick={() => void updateExam(exam)}
-                    disabled={busyId !== null}
-                  >
-                    {busyId === exam.id ? <Loader2 className="spin" size={16} /> : "Save changes"}
-                  </button>
+                  <div className="exam-row-actions">
+                    <button
+                      type="button"
+                      className="small-button exam-update-button"
+                      onClick={() => void updateExam(exam)}
+                      disabled={busyId !== null}
+                    >
+                      {busyId === exam.id ? <Loader2 className="spin" size={16} /> : "Save changes"}
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-button danger exam-delete-button"
+                      aria-label={`Delete ${exam.name}`}
+                      title="Delete exam"
+                      onClick={() => void deleteExam(exam)}
+                      disabled={busyId !== null}
+                    >
+                      <Trash2 size={17} />
+                    </button>
+                  </div>
                 </div>
               </article>
               );
